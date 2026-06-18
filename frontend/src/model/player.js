@@ -16,14 +16,22 @@ let audio = null
 let shuffleOrder = []
 let shufflePos = 0
 
+let rafId = null
+
+function updateTime() {
+  if (audio && isPlaying.value) {
+    currentTime.value = audio.currentTime
+    rafId = requestAnimationFrame(updateTime)
+  }
+}
+
 function ensureAudio() {
   if (audio) return audio
   audio = new Audio()
   audio.preload = 'metadata'
   audio.volume = volume.value
-  audio.addEventListener('timeupdate', () => {
-    currentTime.value = audio.currentTime
-  })
+  
+  // We don't use timeupdate anymore to achieve 60fps sync
   audio.addEventListener('loadedmetadata', () => {
     duration.value = isFinite(audio.duration) ? audio.duration : 0
   })
@@ -33,9 +41,18 @@ function ensureAudio() {
   audio.addEventListener('ended', onEnded)
   audio.addEventListener('play', () => {
     isPlaying.value = true
+    if (!rafId) {
+      rafId = requestAnimationFrame(updateTime)
+    }
   })
   audio.addEventListener('pause', () => {
     isPlaying.value = false
+    if (rafId) {
+      cancelAnimationFrame(rafId)
+      rafId = null
+    }
+    // Final sync
+    if (audio) currentTime.value = audio.currentTime
   })
   return audio
 }

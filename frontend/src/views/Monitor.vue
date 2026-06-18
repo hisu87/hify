@@ -1,8 +1,5 @@
 <template>
   <div class="min-h-screen">
-    <Navbar />
-    <Settings />
-
     <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <!-- Header -->
       <div class="mb-8">
@@ -207,8 +204,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import Navbar from '/src/components/Navbar.vue'
-import Settings from '/src/components/Settings.vue'
 import monitorAPI from '/src/model/monitor.js'
 import { useI18n } from '/src/i18n'
 

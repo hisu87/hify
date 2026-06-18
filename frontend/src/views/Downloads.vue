@@ -1,8 +1,5 @@
 <template>
   <div class="min-h-screen">
-    <Navbar />
-    <Settings />
-
     <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <!-- Header -->
       <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -194,8 +191,6 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
-import Navbar from '/src/components/Navbar.vue'
-import Settings from '/src/components/Settings.vue'
 import API from '/src/model/api'
 import { useI18n } from '/src/i18n'
 import { usePlayer } from '/src/model/player'

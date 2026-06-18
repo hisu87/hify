@@ -15,3 +15,23 @@ services:
     dns:
       - 1.1.1.1
       - 1.0.0.1
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+    - arm
+  main: downtify
+  description:
+    en_us: Download your Spotify playlists and songs along with album art and metadata in a self-hosted way.
+  tagline:
+    en_us: Self-hosted Spotify downloader
+  developer: Henrique Sebastião
+  author: Henrique Sebastião
+  icon: https://raw.githubusercontent.com/henriquesebastiao/downtify/main/frontend/src/assets/downtify.svg
+  thumbnail: ""
+  title:
+    en_us: Downtify
+  category: Music
+  port_map: "8000"
+  index: /

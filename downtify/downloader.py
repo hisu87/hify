@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 import re as _re
+import shutil
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -298,6 +299,19 @@ class Downloader:
                 }
             ],
         }
+
+        # Try to resolve ffmpeg location if it's not in PATH
+        ffmpeg_path = shutil.which('ffmpeg')
+        if not ffmpeg_path and os.name == 'nt':
+            # Check common winget install paths
+            winget_path = Path(os.environ.get('LOCALAPPDATA', '')) / 'Microsoft' / 'WinGet' / 'Packages'
+            if winget_path.exists():
+                for p in winget_path.rglob('ffmpeg.exe'):
+                    if 'bin' in p.parts:
+                        ydl_opts['ffmpeg_location'] = str(p.parent)
+                        logger.info('Found ffmpeg in winget path: {}', p.parent)
+                        break
+
         # Many container setups have IPv6 advertised but unroutable for
         # googlevideo.com, which surfaces as EAI_AGAIN on the AAAA lookup.
         # Setting DOWNTIFY_FORCE_IPV4=1 binds yt-dlp to IPv4 only.
