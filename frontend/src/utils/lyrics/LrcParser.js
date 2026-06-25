@@ -67,7 +67,8 @@ export function parseLrc(lrcStr) {
   // Fill duration và compute words
   for (let i = 0; i < result.length; i++) {
     const line = result[i]
-    const nextTime = i < result.length - 1 ? result[i + 1].time : line.time + 5.0
+    const nextTime =
+      i < result.length - 1 ? result[i + 1].time : line.time + 5.0
     // Cap at 10s để tránh "trống dài" bị animate mãi
     line.duration = Math.min(nextTime - line.time, 10.0)
 
@@ -102,7 +103,10 @@ function buildWordTimingsFromEnhanced(line, lineEndTime) {
     // Text từ sau timestamp này đến timestamp kế tiếp (hoặc cuối line)
     const textStart = m.index + m[0].length
     const textEnd = nextM ? nextM.index : content.length
-    const wordText = content.substring(textStart, textEnd).replace(wordRegex, '').trim()
+    const wordText = content
+      .substring(textStart, textEnd)
+      .replace(wordRegex, '')
+      .trim()
 
     if (!wordText) continue
 

@@ -1,5 +1,5 @@
 <template>
-  <footer class="glass-player-bar fixed inset-x-0 bottom-0 z-50">
+  <footer class="glass-player-bar fixed inset-x-0 bottom-0 z-[110]">
     <div
       class="mx-auto grid h-[88px] w-full max-w-[1600px] grid-cols-1 gap-4 px-4 py-2.5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] lg:px-8"
     >
@@ -127,6 +127,7 @@
 
         <button
           class="icon-btn hidden sm:inline-flex"
+          :class="{ 'icon-btn-active': isLyricsOpen }"
           :disabled="!hasTracks"
           @click="$emit('open-lyrics')"
           title="Lyrics"
@@ -167,6 +168,7 @@ import { Icon } from '@iconify/vue'
 import router from '../router'
 import { formatTime, usePlayer } from '../model/player'
 
+const props = defineProps({ isLyricsOpen: Boolean })
 const emit = defineEmits(['open-lyrics'])
 const player = usePlayer()
 const coverFailed = ref(false)

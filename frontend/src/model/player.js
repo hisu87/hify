@@ -30,7 +30,7 @@ function ensureAudio() {
   audio = new Audio()
   audio.preload = 'metadata'
   audio.volume = volume.value
-  
+
   // We don't use timeupdate anymore to achieve 60fps sync
   audio.addEventListener('loadedmetadata', () => {
     duration.value = isFinite(audio.duration) ? audio.duration : 0

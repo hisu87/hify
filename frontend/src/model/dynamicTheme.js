@@ -22,21 +22,24 @@ export function useDynamicTheme() {
     img.crossOrigin = 'Anonymous'
     img.src = coverUrl
     img.onload = () => {
-      fac.getColorAsync(img, { algorithm: 'dominant' })
-        .then(color => {
+      fac
+        .getColorAsync(img, { algorithm: 'dominant' })
+        .then((color) => {
           // color.hex, color.isDark, color.isLight
           dominantColor.value = color.hex
-          
+
           // Set opacity variations for backgrounds
           const rgba = color.rgba.replace(')', ', 0.15)').replace('rgb', 'rgba')
-          const rgbaDark = color.rgba.replace(')', ', 0.4)').replace('rgb', 'rgba')
-          
+          const rgbaDark = color.rgba
+            .replace(')', ', 0.4)')
+            .replace('rgb', 'rgba')
+
           dominantColorLight.value = rgba
           dominantColorDark.value = rgbaDark
 
           applyColors()
         })
-        .catch(e => {
+        .catch((e) => {
           console.error('Failed to extract dominant color', e)
           resetColors()
         })
@@ -47,9 +50,18 @@ export function useDynamicTheme() {
   }
 
   function applyColors() {
-    document.documentElement.style.setProperty('--dynamic-bg-hex', dominantColor.value)
-    document.documentElement.style.setProperty('--dynamic-bg-light', dominantColorLight.value)
-    document.documentElement.style.setProperty('--dynamic-bg-dark', dominantColorDark.value)
+    document.documentElement.style.setProperty(
+      '--dynamic-bg-hex',
+      dominantColor.value
+    )
+    document.documentElement.style.setProperty(
+      '--dynamic-bg-light',
+      dominantColorLight.value
+    )
+    document.documentElement.style.setProperty(
+      '--dynamic-bg-dark',
+      dominantColorDark.value
+    )
   }
 
   function resetColors() {
@@ -61,11 +73,15 @@ export function useDynamicTheme() {
     document.documentElement.style.removeProperty('--dynamic-bg-dark')
   }
 
-  watch(() => player.currentTrack.value?.cover, (newCover) => {
-    updateThemeColor(newCover)
-  }, { immediate: true })
+  watch(
+    () => player.currentTrack.value?.cover,
+    (newCover) => {
+      updateThemeColor(newCover)
+    },
+    { immediate: true }
+  )
 
   return {
-    dominantColor
+    dominantColor,
   }
 }

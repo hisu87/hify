@@ -1,16 +1,22 @@
 <template>
-  <div class="min-h-dvh overflow-x-hidden bg-transparent text-base-content relative z-0">
+  <div
+    class="min-h-dvh overflow-x-hidden bg-transparent text-base-content relative z-0"
+  >
     <!-- Lucid Dynamic Background -->
     <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
-      <div 
+      <div
         class="absolute inset-[-10%] bg-cover bg-center transition-all duration-[1500ms] ease-out"
-        :style="{ 
-          backgroundImage: player.currentTrack.value?.cover ? `url(${player.currentTrack.value.cover})` : 'none',
+        :style="{
+          backgroundImage: player.currentTrack.value?.cover
+            ? `url(${player.currentTrack.value.cover})`
+            : 'none',
           filter: 'blur(60px) saturate(200%)',
-          transform: 'scale(1.15)'
+          transform: 'scale(1.15)',
         }"
       ></div>
-      <div class="absolute inset-0 bg-base-300/40 dark:bg-black/60 transition-colors duration-500"></div>
+      <div
+        class="absolute inset-0 bg-base-300/40 dark:bg-black/60 transition-colors duration-500"
+      ></div>
     </div>
 
     <LyricsView :is-open="isLyricsOpen" @close="isLyricsOpen = false" />
@@ -26,7 +32,10 @@
         </div>
       </main>
     </router-view>
-    <PlayerBar @open-lyrics="isLyricsOpen = true" />
+    <PlayerBar
+      :is-lyrics-open="isLyricsOpen"
+      @open-lyrics="isLyricsOpen = !isLyricsOpen"
+    />
     <Settings />
   </div>
 </template>

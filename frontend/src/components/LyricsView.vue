@@ -53,6 +53,7 @@
             v-for="(line, li) in parsedLyrics"
             :key="li"
             class="lyric-line"
+            :class="getLineClass(li)"
             :ref="(el) => registerLineEl(li, el)"
             @click="player.seek(line.time)"
           >
@@ -68,8 +69,11 @@
             >
               <!-- Faded base layer -->
               <span class="word-base">{{ word.text }}</span>
-              <!-- Animated highlight layer — filled by --fill-pct CSS var -->
-              <span class="word-hl">{{ word.text }}</span>
+              <!-- Wrapper for highlight layer to apply drop-shadow without clipping -->
+              <span class="word-hl-wrapper">
+                <!-- Animated highlight layer — filled by --fill-pct CSS var -->
+                <span class="word-hl">{{ word.text }}</span>
+              </span>
             </span>
           </div>
 
@@ -115,6 +119,7 @@ const lyricsRequests = new Map()
 // ─── Animator ─────────────────────────────────────────────────────────────────
 const animator = new LyricsAnimator()
 animator.getTime = () => player.currentTime.value
+animator.isPlaying = () => player.isPlaying.value
 
 // Line element refs
 const lineElMap = new Map()
@@ -160,6 +165,15 @@ function updateScrollGoal(lineIdx) {
     const goal = -(center - containerH * 0.4)
     animator.setScrollGoal(goal)
   })
+}
+
+// ─── Alignment logic ──────────────────────────────────────────────────────────
+function getLineClass(li) {
+  const rand = Math.sin(li + 1) * 10000
+  const val = rand - Math.floor(rand)
+  if (val < 0.33) return 'align-left'
+  if (val < 0.66) return 'align-center'
+  return 'align-right'
 }
 
 // ─── Background style ─────────────────────────────────────────────────────────
@@ -332,10 +346,7 @@ function applyLyrics(lines) {
 /* ─── Root ───────────────────────────────────────────────────────────────────── */
 .lyrics-root {
   color: white;
-  font-family:
-    'Tahoma',
-    'Geneva',
-    sans-serif;
+  font-family: 'Tahoma', 'Geneva', sans-serif;
 }
 
 /* ─── Background ─────────────────────────────────────────────────────────────── */
@@ -418,11 +429,27 @@ function applyLyrics(lines) {
   align-items: flex-end;
   width: 100%;
   padding: 0.4rem 0;
-  margin-bottom: 0.5rem;
+  margin-bottom: 2.5rem;
   line-height: 1.1;
   cursor: pointer;
-  /* GPU hint for blur animation */
-  will-change: filter;
+  /* GPU hint for blur and scale animations */
+  will-change: filter, transform;
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.align-left {
+  justify-content: flex-start;
+  transform-origin: left center;
+}
+
+.align-center {
+  justify-content: center;
+  transform-origin: center center;
+}
+
+.align-right {
+  justify-content: flex-end;
+  transform-origin: right center;
 }
 
 .lyric-instrument {
@@ -435,17 +462,13 @@ function applyLyrics(lines) {
 .lyric-word {
   /* Inline-grid: base and hl layers stacked exactly */
   display: inline-grid;
-  margin-right: 0.18em;
-  margin-bottom: 0.15em;
+  margin-right: 0.3em;
+  margin-bottom: 0.25em;
   transform-origin: bottom center;
   cursor: pointer;
   /* Spring will write transform — GPU composited */
-  will-change: transform, filter;
+  will-change: transform;
   backface-visibility: hidden;
-  /* Glow via CSS custom properties written by spring */
-  filter:
-    drop-shadow(0 0 var(--glow-blur, 0px) rgba(255, 255, 255, var(--glow-opacity, 0)))
-    drop-shadow(0 0 calc(var(--glow-blur, 0px) * 2.5) rgba(255, 255, 255, calc(var(--glow-opacity, 0) * 0.5)));
 }
 
 /* Base (faded) layer */
@@ -455,9 +478,25 @@ function applyLyrics(lines) {
   color: white;
   font-size: clamp(1.6rem, 4.5vw, 3.75rem);
   font-weight: 900;
-  letter-spacing: -0.025em;
+  letter-spacing: 0.2rem;
+  white-space: nowrap;
   /* opacity set by spring via AnimatorStore */
   opacity: 0.28;
+}
+
+/* Wrapper for highlight layer to apply drop-shadow without clipping */
+.word-hl-wrapper {
+  grid-column: 1;
+  grid-row: 1;
+  display: inline-grid;
+  will-change: filter;
+  filter: drop-shadow(
+      0 0 var(--glow-blur, 0px) rgba(255, 255, 255, var(--glow-opacity, 0))
+    )
+    drop-shadow(
+      0 0 calc(var(--glow-blur, 0px) * 2.5)
+        rgba(255, 255, 255, calc(var(--glow-opacity, 0) * 0.5))
+    );
 }
 
 /* Highlight (filled) layer */
@@ -466,7 +505,7 @@ function applyLyrics(lines) {
   grid-row: 1;
   font-size: clamp(1.6rem, 4.5vw, 3.75rem);
   font-weight: 900;
-  letter-spacing: -0.025em;
+  letter-spacing: 0.2rem;
   white-space: nowrap;
   color: white;
   /* Gradient fill: --fill-pct is written by spring each frame */

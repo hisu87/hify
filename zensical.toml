@@ -24,6 +24,7 @@ nav = [
     { "Docker Compose"        = "getting-started/docker-compose.md"       },
     { "One-Click Install"     = "getting-started/one-click.md"            },
     { "Environment Variables" = "getting-started/environment-variables.md"},
+    { "Local Docker Build"    = "getting-started/local-docker-build.md"   },
   ]},
   { "Features" = [
     { "Overview"             = "features/index.md"                  },
