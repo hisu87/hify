@@ -1,6 +1,6 @@
 services:
-  downtify:
-    container_name: downtify
+  downtify-hisu:
+    container_name: downtify-hisu
     image: 'ghcr.io/hisu87/downtify:${TAG-latest}'
     restart: unless-stopped
     ports:
@@ -20,17 +20,17 @@ x-casaos:
     - amd64
     - arm64
     - arm
-  main: downtify
+  main: downtify-hisu
   description:
     en_us: Download your Spotify playlists and songs along with album art and metadata in a self-hosted way.
   tagline:
-    en_us: Self-hosted Spotify downloader
-  developer: Henrique Sebastião
-  author: Henrique Sebastião
-  icon: https://raw.githubusercontent.com/henriquesebastiao/downtify/main/frontend/src/assets/downtify.svg
+    en_us: Self-hosted Spotify downloader (Hisu87 fork)
+  developer: Hisu87
+  author: Hisu87
+  icon: https://raw.githubusercontent.com/hisu87/downtify/main/frontend/src/assets/downtify.svg
   thumbnail: ""
   title:
-    en_us: Downtify
+    en_us: Downtify (Hisu87)
   category: Music
   version: 2.8.0
   port_map: "8000"
