@@ -4,13 +4,13 @@
   >
     <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
       <div
-        class="absolute left-1/2 top-1/4 -translate-x-1/2 h-[420px] w-[420px] rounded-full blur-[120px] transition-colors duration-700"
+        class="blob-pulse-center absolute left-1/2 top-1/4 h-[420px] w-[420px] rounded-full blur-[120px] transition-colors duration-700"
         style="
           background-color: var(--dynamic-bg-light, rgba(250, 35, 59, 0.25));
         "
       ></div>
       <div
-        class="absolute right-10 bottom-12 h-64 w-64 rounded-full blur-3xl transition-colors duration-700"
+        class="blob-pulse-right absolute right-10 bottom-12 h-64 w-64 rounded-full blur-3xl transition-colors duration-700"
         style="
           background-color: var(--dynamic-bg-light, rgba(250, 35, 59, 0.1));
         "
@@ -21,12 +21,7 @@
       <div class="mx-auto mb-6 flex justify-center">
         <img
           src="../assets/14886.gif"
-          class="h-[250px] w-auto object-contain transition-all duration-700"
-          style="
-            filter: drop-shadow(
-              0 0 35px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.4))
-            );
-          "
+          class="hero-glow-pulse h-[250px] w-auto object-contain"
           alt="Loading animation"
         />
       </div>
@@ -79,3 +74,52 @@ onMounted(() => {
   if (v) version.value = v
 })
 </script>
+
+<style scoped>
+.hero-glow-pulse {
+  animation: heroGlow 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+@keyframes heroGlow {
+  0% {
+    filter: drop-shadow(
+      0 0 35px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.4))
+    );
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    filter: drop-shadow(
+      0 0 70px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.65))
+    );
+    transform: scale(1.03) translateY(-4px);
+  }
+}
+
+.blob-pulse-center {
+  animation: blobPulseCenter 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite
+    alternate;
+}
+@keyframes blobPulseCenter {
+  0% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) scale(1.05);
+    opacity: 0.85;
+  }
+}
+
+.blob-pulse-right {
+  animation: blobPulseRight 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+@keyframes blobPulseRight {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.08);
+    opacity: 0.8;
+  }
+}
+</style>

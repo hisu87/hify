@@ -433,15 +433,17 @@ onUnmounted(() => {
   box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
 }
 .pulse-glow {
-  animation: glow 2.4s ease-in-out infinite;
+  animation: glow 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 @keyframes glow {
   0%,
   100% {
-    box-shadow: 0 0 36px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.3));
+    box-shadow: 0 0 36px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.4));
+    transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 60px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.55));
+    box-shadow: 0 0 80px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.6));
+    transform: scale(1.04);
   }
 }
 </style>
