@@ -72,17 +72,40 @@ def _fetch_lrclib(song: dict[str, Any]) -> Optional[Lyrics]:
         logger.opt(exception=True).warning('lrclib request failed')
         return None
 
-    if response.status_code == 404:
-        return None
-    if response.status_code != 200:
-        logger.warning(
-            'lrclib returned HTTP {} for {!r}', response.status_code, title
-        )
-        return None
+    data = None
+    if response.status_code == 200:
+        try:
+            data = response.json()
+        except ValueError:
+            pass
 
-    try:
-        data = response.json()
-    except ValueError:
+    # Fallback to search if the exact match fails
+    if not data or response.status_code == 404:
+        search_params = {
+            'track_name': title,
+            'artist_name': artists[0],
+        }
+        try:
+            search_response = requests.get(
+                f'{LRCLIB_BASE}/search',
+                params=search_params,
+                headers={'User-Agent': _USER_AGENT},
+                timeout=10,
+            )
+            if search_response.status_code == 200:
+                results = search_response.json()
+                if results and isinstance(results, list):
+                    # Prefer results with synced lyrics, otherwise first result
+                    for result in results:
+                        if result.get('syncedLyrics'):
+                            data = result
+                            break
+                    if not data:
+                        data = results[0]
+        except (requests.RequestException, ValueError):
+            logger.opt(exception=True).warning('lrclib search fallback failed')
+
+    if not data:
         return None
 
     plain = (data.get('plainLyrics') or '').strip() or None

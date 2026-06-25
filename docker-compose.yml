@@ -35,3 +35,14 @@ x-casaos:
   category: Music
   port_map: "8000"
   index: /
+  volumes:
+    - type: bind
+      target: /downloads
+      description:
+        en_us: Downloads folder
+      source: /DATA/Downloads/downtify
+    - type: bind
+      target: /data
+      description:
+        en_us: Data folder
+      source: /DATA/AppData/$AppID/data
