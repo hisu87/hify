@@ -1,7 +1,7 @@
 #!make
 
 DOWNTIFY_VERSION := 2.8.0
-TARGET := henriquesebastiao/downtify
+TARGET := hisu87/downtify
 
 all: build latest
 

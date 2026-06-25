@@ -44,4 +44,4 @@ x-casaos:
       target: /data
       description:
         en_us: Data folder
-      source: /DATA/AppData/$AppID/data
+      source: /DATA/AppData/downtify/data

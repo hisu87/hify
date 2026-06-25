@@ -23,6 +23,10 @@ jobs:
         id: version
         run: echo "VERSION=$(git describe --tags --always | cut -d'-' -f1)" >> "$GITHUB_OUTPUT"
 
+      - name: Generate timestamp
+        id: time
+        run: echo "TIMESTAMP=$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
 
@@ -45,4 +49,5 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ github.repository }}:build-${{ steps.time.outputs.TIMESTAMP }}
           platforms: linux/amd64,linux/arm64
