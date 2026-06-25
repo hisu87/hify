@@ -14,9 +14,12 @@
     <div class="relative w-full max-w-2xl text-center animate-slide-up">
       <div class="mx-auto mb-6 inline-flex">
         <div
-          class="relative inline-flex items-center justify-center rounded-3xl surface-strong shadow-glow"
+          class="relative inline-flex items-center justify-center rounded-3xl surface-strong shadow-glow overflow-hidden p-2"
         >
-          <img src="../assets/14886.gif" class="h-[200px] w-[200px]" />
+          <img
+            src="../assets/14886.gif"
+            class="block max-w-full h-auto object-contain"
+          />
         </div>
       </div>
 

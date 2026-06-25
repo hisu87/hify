@@ -16,9 +16,12 @@
           />
           <div
             v-else
-            class="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#FA233B]/25 to-[#ff8f9f]/10 text-[#FA233B]"
+            class="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#FA233B]/25 to-[#ff8f9f]/10 p-2"
           >
-            <Icon icon="clarity:music-note-line" class="h-6 w-6" />
+            <img
+              src="../assets/14882.png"
+              class="h-full w-full object-contain opacity-60"
+            />
           </div>
         </div>
 

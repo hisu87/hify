@@ -55,7 +55,11 @@
               class="absolute inset-0 h-full w-full object-cover"
               @error="markCoverFailed(player.currentTrack.value.file)"
             />
-            <Icon v-else icon="clarity:music-note-line" class="h-24 w-24" />
+            <img
+              v-else
+              src="../assets/14882.png"
+              class="h-24 w-24 object-contain opacity-60"
+            />
             <div
               v-if="player.isPlaying.value"
               class="absolute bottom-3 right-3 equalizer h-5"
