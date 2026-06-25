@@ -33,6 +33,7 @@ x-casaos:
   title:
     en_us: Downtify
   category: Music
+  version: 2.8.0
   port_map: "8000"
   index: /
   volumes:
