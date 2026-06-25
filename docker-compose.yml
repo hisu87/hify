@@ -1,14 +1,13 @@
 services:
   downtify-hisu:
     container_name: downtify-hisu
-    image: 'ghcr.io/hisu87/downtify:${TAG-latest}'
+    image: ghcr.io/hisu87/downtify:latest
     restart: unless-stopped
     ports:
       - '8000:30321'
     volumes:
-      - ./docker/downloads:/downloads
-      - ./docker/data:/data
-      - ./frontend/dist:/downtify/frontend/dist:ro
+      - /DATA/Downloads/downtify:/downloads
+      - /DATA/AppData/downtify/data:/data
     environment:
       - DOWNTIFY_PORT=30321
     dns:

@@ -270,6 +270,28 @@ async function doFetch(key) {
   const t = currentTrack.value
   if (!t) throw new Error('No track selected')
 
+  // 1. Try local .lrc file first based on file path
+  if (t.file) {
+    try {
+      const lrcFile = t.file.replace(/\.[^.]+$/, '.lrc')
+      const encodedUrl = lrcFile.split('/').map(encodeURIComponent).join('/')
+      const localRes = await fetch(`/downloads/${encodedUrl}`)
+      if (localRes.ok) {
+        const text = await localRes.text()
+        if (text && text.trim().length > 0) {
+          const lines = parseLrc(text)
+          if (lines && lines.length > 0) {
+            lyricsCache.set(key, lines)
+            return lines
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore local fetch error and fallback to lrclib API
+    }
+  }
+
+  // 2. Fallback to API if local file doesn't exist or is empty
   const params = new URLSearchParams()
   if (t.title) params.append('track_name', t.title)
   if (t.artist) params.append('artist_name', t.artist)
