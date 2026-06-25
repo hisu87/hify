@@ -33,9 +33,9 @@ module.exports = {
         ],
       },
       boxShadow: {
-        'glow-sm': '0 0 24px rgba(26, 208, 92, 0.18)',
-        glow: '0 0 36px rgba(26, 208, 92, 0.30)',
-        'glow-lg': '0 0 60px rgba(26, 208, 92, 0.45)',
+        'glow-sm': '0 0 24px var(--dynamic-bg-light, rgba(250, 35, 59, 0.25))',
+        glow: '0 0 36px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.4))',
+        'glow-lg': '0 0 60px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.55))',
       },
       animation: {
         'fade-in': 'fadeIn 0.35s ease-out',

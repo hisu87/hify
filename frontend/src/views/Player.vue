@@ -438,10 +438,10 @@ onUnmounted(() => {
 @keyframes glow {
   0%,
   100% {
-    box-shadow: 0 0 36px rgba(26, 208, 92, 0.3);
+    box-shadow: 0 0 36px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.3));
   }
   50% {
-    box-shadow: 0 0 60px rgba(26, 208, 92, 0.55);
+    box-shadow: 0 0 60px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.55));
   }
 }
 </style>

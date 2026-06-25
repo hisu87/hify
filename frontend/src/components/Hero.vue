@@ -4,23 +4,31 @@
   >
     <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
       <div
-        class="absolute left-1/2 top-1/4 -translate-x-1/2 h-[420px] w-[420px] rounded-full bg-primary/25 blur-[120px]"
+        class="absolute left-1/2 top-1/4 -translate-x-1/2 h-[420px] w-[420px] rounded-full blur-[120px] transition-colors duration-700"
+        style="
+          background-color: var(--dynamic-bg-light, rgba(250, 35, 59, 0.25));
+        "
       ></div>
       <div
-        class="absolute right-10 bottom-12 h-64 w-64 rounded-full bg-primary/10 blur-3xl"
+        class="absolute right-10 bottom-12 h-64 w-64 rounded-full blur-3xl transition-colors duration-700"
+        style="
+          background-color: var(--dynamic-bg-light, rgba(250, 35, 59, 0.1));
+        "
       ></div>
     </div>
 
     <div class="relative w-full max-w-2xl text-center animate-slide-up">
-      <div class="mx-auto mb-6 inline-flex">
-        <div
-          class="relative inline-flex items-center justify-center rounded-3xl surface-strong shadow-glow overflow-hidden p-2"
-        >
-          <img
-            src="../assets/14886.gif"
-            class="block max-w-full h-auto object-contain"
-          />
-        </div>
+      <div class="mx-auto mb-6 flex justify-center">
+        <img
+          src="../assets/14886.gif"
+          class="h-[250px] w-auto object-contain transition-all duration-700"
+          style="
+            filter: drop-shadow(
+              0 0 35px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.4))
+            );
+          "
+          alt="Loading animation"
+        />
       </div>
 
       <h1 class="text-balance text-5xl sm:text-6xl font-bold tracking-tight">
