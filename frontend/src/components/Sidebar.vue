@@ -13,13 +13,13 @@
         <img
           v-if="!layout.isLeftSidebarCollapsed.value"
           src="../assets/14884.png"
-          class="h-50 w-50 object-contain"
+          class="h-[50px] w-[50px] object-contain"
           alt="Downtify"
         />
         <img
           v-else
           src="../assets/14882.png"
-          class="h-50 w-50 object-contain"
+          class="h-[50px] w-[50px] object-contain"
           alt="Downtify"
         />
       </div>

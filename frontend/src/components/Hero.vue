@@ -16,12 +16,12 @@
         <div
           class="relative inline-flex items-center justify-center rounded-3xl surface-strong shadow-glow"
         >
-          <img src="../assets/14886.gif" class="h-200 w-200" />
+          <img src="../assets/14886.gif" class="h-[200px] w-[200px]" />
         </div>
       </div>
 
       <h1 class="text-balance text-5xl sm:text-6xl font-bold tracking-tight">
-        Down<span class="text-primary">tify</span>
+        Spo<span class="text-primary">tify</span>
       </h1>
       <div class="mt-3 flex items-center justify-center gap-2">
         <span class="badge-soft">v{{ version }}</span>
