@@ -14,9 +14,9 @@
     <div class="relative w-full max-w-2xl text-center animate-slide-up">
       <div class="mx-auto mb-6 inline-flex">
         <div
-          class="relative inline-flex h-24 w-24 items-center justify-center rounded-3xl surface-strong shadow-glow"
+          class="relative inline-flex items-center justify-center rounded-3xl surface-strong shadow-glow"
         >
-          <img src="../assets/14886.gif" class="h-14 w-14" />
+          <img src="../assets/14886.gif" class="h-200 w-200" />
         </div>
       </div>
 

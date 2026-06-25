@@ -9,28 +9,28 @@
       class="flex items-center px-3 pb-6 pt-2"
       :class="layout.isLeftSidebarCollapsed.value ? 'justify-center' : 'gap-3'"
     >
-      <div class="flex h-9 w-9 shrink-0 items-center justify-center">
+      <div class="flex items-center justify-center">
         <img
           v-if="!layout.isLeftSidebarCollapsed.value"
           src="../assets/14884.png"
-          class="h-9 w-9 object-contain"
+          class="h-50 w-50 object-contain"
           alt="Downtify"
         />
         <img
           v-else
           src="../assets/14882.png"
-          class="h-9 w-9 object-contain"
+          class="h-50 w-50 object-contain"
           alt="Downtify"
         />
       </div>
-      <div class="min-w-0" v-show="!layout.isLeftSidebarCollapsed.value">
+      <!-- <div class="min-w-0" v-show="!layout.isLeftSidebarCollapsed.value">
         <h1
           class="text-lg font-bold tracking-tight text-base-content flex items-center gap-1"
         >
           <span class="text-[#FA233B]">Downtify</span>
           <span class="font-normal opacity-80">Music</span>
         </h1>
-      </div>
+      </div> -->
     </div>
 
     <nav
