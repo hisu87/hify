@@ -19,7 +19,7 @@ Two scripts are provided in the root directory to automate the entire process (b
   ```
 
 - **Linux/macOS/Git Bash:**
-
+  
   ```bash
   chmod +x build-and-run.sh
   ./build-and-run.sh
