@@ -32,6 +32,8 @@ function parseTimestamp(min, sec, msStr) {
  * @property {LyricWord[]} words
  */
 export function parseLrc(lrcStr) {
+  if (typeof lrcStr !== 'string') return []
+
   const lineRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/
   const wordRegex = /<(\d{2}):(\d{2})\.(\d{2,3})>/g
 

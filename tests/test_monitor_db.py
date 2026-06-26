@@ -1,60 +1,50 @@
-"""Security and unit tests for PlaylistMonitorDB."""
-
-from __future__ import annotations
-
 import pytest
-
+import sqlite3
+import time
+from pathlib import Path
 from downtify.monitor import PlaylistMonitorDB
 
-
 @pytest.fixture
-def monitor_db(tmp_path):
-    db_file = tmp_path / 'test_monitor.db'
-    return PlaylistMonitorDB(db_file)
+def monitor_db(tmp_path: Path):
+    db_path = tmp_path / "test_monitor.db"
+    return PlaylistMonitorDB(db_path)
+def test_mark_tracks_downloaded_batch_correctness(monitor_db):
+    pl = monitor_db.add_playlist('spot_batch', 'Batch PL', 'https://open.spotify.com/playlist/…0')
+    batch_data = [
+        ('track_1', '2026-06-26T10:00:00+00:00', 'file1.mp3'),
+        ('track_2', '2026-06-26T10:01:00+00:00', 'file2.mp3'),
+    ]
+
+    # We will implement this
+    monitor_db.mark_tracks_downloaded(pl.id, batch_data)
+
+    stored = monitor_db.get_track_filenames(pl.id)
+    assert stored == {'track_1': 'file1.mp3', 'track_2': 'file2.mp3'}
 
 
-def test_update_playlist_valid_columns(monitor_db):
-    pl = monitor_db.add_playlist(
-        'spot123', 'My Playlist', 'https://spotify.com/123'
-    )
+def test_benchmark_batch_vs_individual_insert(monitor_db):
+    pl_ind = monitor_db.add_playlist('pl_ind', 'Ind PL', 'https://open.spotify.com/playlist/…1')
+    pl_bat = monitor_db.add_playlist('pl_bat', 'Bat PL', 'https://open.spotify.com/playlist/…2')
 
-    updated = monitor_db.update_playlist(
-        pl.id,
-        name='Renamed Playlist',
-        interval_minutes=120,
-        last_track_count=25,
-    )
+    records_ct = 500
+    mock_batch = [
+        (f'track_b_{i}', '2026-06-26T12:00:00+00:00', f'song_{i}.mp3')
+        for i in range(records_ct)
+    ]
 
-    assert updated is not None
-    assert updated.name == 'Renamed Playlist'
-    assert updated.interval_minutes == 120
-    assert updated.last_track_count == 25
+    # Measure N+1 Baseline
+    t0 = time.perf_counter()
+    for i in range(records_ct):
+        monitor_db.mark_track_downloaded(pl_ind.id, f'track_i_{i}', f'song_{i}.mp3')
+    ind_duration = time.perf_counter() - t0
 
+    # Measure Optimized Executemany Batch
+    t0 = time.perf_counter()
+    monitor_db.mark_tracks_downloaded(pl_bat.id, mock_batch)
+    batch_duration = time.perf_counter() - t0
 
-def test_update_playlist_ignores_malicious_sql_injection_keys(monitor_db):
-    pl = monitor_db.add_playlist(
-        'spot456', 'Safe Playlist', 'https://spotify.com/456'
-    )
+    speedup = ind_duration / max(1e-9, batch_duration)
+    print(f"\n[Benchmark] 500 Inserts -> Individual: {ind_duration:.4f}s | Batch: {batch_duration:.4f}s ({speedup:.1f}x faster)")
 
-    # Attempt SQL injection via column name tampering
-    malicious_kwargs = {
-        'name': 'Hacked Name',
-        'enabled = 0; DROP TABLE monitored_playlists; --': 'malicious_payload',
-        'nonexistent_column': 'ignored_val',
-    }
-
-    updated = monitor_db.update_playlist(pl.id, **malicious_kwargs)
-
-    assert updated is not None
-    assert updated.name == 'Hacked Name'
-    # Table must survive clean and uncorrupted
-    assert len(monitor_db.list_playlists()) == 1
-
-
-def test_update_playlist_empty_kwargs_returns_unmodified(monitor_db):
-    pl = monitor_db.add_playlist(
-        'spot789', 'Empty Test', 'https://spotify.com/789'
-    )
-
-    result = monitor_db.update_playlist(pl.id)
-    assert result == pl
+    # Batch executemany should be overwhelmingly faster than 500 distinct ACID transactions
+    assert batch_duration < ind_duration

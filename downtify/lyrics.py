@@ -61,7 +61,7 @@ def _fallback_search_lrclib(title: str, artist: str) -> Optional[dict[str, Any]]
         results = response.json()
         if not results or not isinstance(results, list):
             return None
-            
+
         for result in results:
             if result.get('syncedLyrics'):
                 return result
