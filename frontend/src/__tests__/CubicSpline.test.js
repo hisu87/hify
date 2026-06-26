@@ -3,12 +3,14 @@ import {
   CubicSpline,
   SCALE_CURVE,
   Y_OFFSET_CURVE,
-  GLOW_CURVE
+  GLOW_CURVE,
 } from '../utils/lyrics/CubicSpline'
 
 describe('CubicSpline', () => {
   it('throws an error if less than 2 keypoints are provided', () => {
-    expect(() => new CubicSpline()).toThrow('CubicSpline cần ít nhất 2 keypoints')
+    expect(() => new CubicSpline()).toThrow(
+      'CubicSpline cần ít nhất 2 keypoints'
+    )
     expect(() => new CubicSpline([])).toThrow()
     expect(() => new CubicSpline([{ t: 0, v: 1 }])).toThrow()
   })
@@ -17,7 +19,7 @@ describe('CubicSpline', () => {
     const spline = new CubicSpline([
       { t: 1, v: 10 },
       { t: 0, v: 0 },
-      { t: 0.5, v: 5 }
+      { t: 0.5, v: 5 },
     ])
     expect(spline.points[0].t).toBe(0)
     expect(spline.points[1].t).toBe(0.5)
@@ -27,7 +29,7 @@ describe('CubicSpline', () => {
   it('clamps values at lower and upper boundaries', () => {
     const spline = new CubicSpline([
       { t: 0, v: 10 },
-      { t: 1, v: 20 }
+      { t: 1, v: 20 },
     ])
     expect(spline.at(-0.5)).toBe(10)
     expect(spline.at(1.5)).toBe(20)
@@ -38,7 +40,7 @@ describe('CubicSpline', () => {
       { t: 0, v: 0 },
       { t: 0.3, v: 5 },
       { t: 0.7, v: 10 },
-      { t: 1.0, v: 20 }
+      { t: 1.0, v: 20 },
     ])
     // Floating point math in splines necessitates toBeCloseTo
     expect(spline.at(0)).toBeCloseTo(0)
@@ -50,7 +52,7 @@ describe('CubicSpline', () => {
   it('handles a 2-point minimum (linear-like fallback)', () => {
     const spline = new CubicSpline([
       { t: 0, v: 0 },
-      { t: 1, v: 10 }
+      { t: 1, v: 10 },
     ])
     expect(spline.at(0)).toBeCloseTo(0)
     // A 2-point Catmull-Rom effectively degrades gracefully to linear
@@ -62,7 +64,7 @@ describe('CubicSpline', () => {
     const spline = new CubicSpline([
       { t: 0, v: 0 },
       { t: 0.5, v: 10 },
-      { t: 1, v: 0 }
+      { t: 1, v: 0 },
     ])
     const mid = spline.at(0.25)
     expect(mid).toBeGreaterThan(0)
@@ -73,7 +75,7 @@ describe('CubicSpline', () => {
     const spline = new CubicSpline([
       { t: 0, v: 0 },
       { t: 0.5, v: -10 },
-      { t: 1, v: 0 }
+      { t: 1, v: 0 },
     ])
     expect(spline.at(0.5)).toBeCloseTo(-10)
 
