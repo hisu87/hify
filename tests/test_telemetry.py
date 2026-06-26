@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from downtify.telemetry import _collapse_ws
+from downtify.telemetry import (
+    _collapse_ws,
+    json_log_blob,
+    redact_sensitive_mapping,
+)
 
 
 @pytest.mark.parametrize(
@@ -27,12 +31,6 @@ def test_collapse_ws_normalizes_all_whitespace_variants(
     raw_text, expected_output
 ):
     assert _collapse_ws(raw_text) == expected_output
-
-
-from downtify.telemetry import (
-    json_log_blob,
-    redact_sensitive_mapping,
-)
 
 
 def test_redact_mapping_redacts_sensitive_keys_case_insensitive():

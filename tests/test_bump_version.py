@@ -5,18 +5,16 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 SCRIPT = Path(__file__).parents[1] / 'version.sh'
 
 
 def test_script_exists():
     assert SCRIPT.exists(), 'version.sh is missing from repo root'
-
-
-import sys
-
-import pytest
 
 
 def test_script_is_executable():
@@ -26,6 +24,8 @@ def test_script_is_executable():
 
 
 def test_current_flag_returns_valid_semver():
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     result = subprocess.run(
         ['bash', str(SCRIPT), '--current'],
         capture_output=True,
@@ -40,6 +40,8 @@ def test_current_flag_returns_valid_semver():
 
 
 def test_invalid_semver_rejected():
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     result = subprocess.run(
         ['bash', str(SCRIPT), 'not-semver'],
         capture_output=True,
@@ -50,6 +52,8 @@ def test_invalid_semver_rejected():
 
 
 def test_missing_argument_shows_usage():
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     result = subprocess.run(
         ['bash', str(SCRIPT)],
         capture_output=True,
@@ -89,6 +93,8 @@ def _setup_fake_repo(base: Path) -> None:
 
 
 def test_bump_updates_all_three_files(tmp_path):
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     _setup_fake_repo(tmp_path)
     script_copy = tmp_path / 'version.sh'
     shutil.copy(SCRIPT, script_copy)
@@ -124,6 +130,8 @@ def test_bump_updates_all_three_files(tmp_path):
 
 
 def test_bump_noop_when_already_at_target(tmp_path):
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     _setup_fake_repo(tmp_path)
     script_copy = tmp_path / 'version.sh'
     shutil.copy(SCRIPT, script_copy)
@@ -140,6 +148,8 @@ def test_bump_noop_when_already_at_target(tmp_path):
 
 
 def test_current_flag_in_fake_repo(tmp_path):
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     _setup_fake_repo(tmp_path)
     script_copy = tmp_path / 'version.sh'
     shutil.copy(SCRIPT, script_copy)

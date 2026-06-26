@@ -1,6 +1,6 @@
 <template>
   <footer
-    class="glass-player-bar fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] lg:bottom-0 z-[110]"
+    class="glass-player-bar fixed inset-x-0 bottom-[calc(64px_+_env(safe-area-inset-bottom))] lg:bottom-0 z-[110]"
     @touchstart="onTouchStart"
     @touchend="onTouchEnd"
   >

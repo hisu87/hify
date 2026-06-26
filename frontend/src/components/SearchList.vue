@@ -3,7 +3,10 @@
     <!-- Header -->
     <div class="mb-8">
       <h1 class="text-2xl font-bold tracking-tight">{{ t('search.title') }}</h1>
-      <p class="mt-1 text-sm text-base-content/60">
+      <div class="mt-5 mb-4 w-full max-w-xl">
+        <SearchInput />
+      </div>
+      <p class="text-sm text-base-content/60">
         <template v-if="sm.searchTerm.value">
           {{ t('search.matchesFor') }}
           <span class="text-base-content/90 font-medium">
@@ -182,6 +185,7 @@ import { Icon } from '@iconify/vue'
 import { useSearchManager } from '../model/search'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
+import SearchInput from './SearchInput.vue'
 
 const PAGE_SIZE = 5
 

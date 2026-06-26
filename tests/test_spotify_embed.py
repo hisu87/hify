@@ -250,7 +250,7 @@ def test_album_tracks_from_id_merges_row_subtitle():
             return_value='',
         ),
     ):
-        songs = album_tracks_from_id('dummyAlbumId')
+        songs = album_tracks_from_id('dummyAlbumId2')
 
     assert len(songs) == 1
     assert songs[0]['song_id'] == 't1'

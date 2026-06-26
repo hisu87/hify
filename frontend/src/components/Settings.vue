@@ -276,7 +276,7 @@
 
       <!-- Footer -->
       <div
-        class="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/5"
+        class="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/5 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4"
       >
         <label
           for="settings-modal"

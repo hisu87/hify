@@ -79,7 +79,8 @@ def build_m3u_content(
         if title or artist:
             label = ' - '.join(p for p in (artist, title) if p)
             lines.append(f'#EXTINF:{duration_int},{label}')
-        lines.append(os.path.relpath(path, start=m3u_dir))
+        rel_path = os.path.relpath(path, start=m3u_dir)
+        lines.append(rel_path.replace('\\', '/'))
         kept += 1
     # Standard M3U uses LF line endings.
     return '\n'.join(lines) + '\n', kept

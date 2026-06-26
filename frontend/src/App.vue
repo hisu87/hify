@@ -20,7 +20,14 @@
     </div>
 
     <LyricsView :is-open="isLyricsOpen" @close="isLyricsOpen = false" />
-    <div class="flex min-h-dvh w-full overflow-hidden pb-[136px] lg:pb-[96px]">
+    <div
+      class="flex min-h-dvh w-full overflow-hidden transition-[padding] duration-300"
+      :class="
+        route?.name === 'Player'
+          ? 'pb-[calc(64px_+_env(safe-area-inset-bottom))] lg:pb-0'
+          : 'pb-[calc(136px_+_env(safe-area-inset-bottom))] lg:pb-[96px]'
+      "
+    >
       <Sidebar />
       <main class="relative flex-1 min-w-0 transition-all duration-300">
         <div
@@ -36,6 +43,7 @@
       <NowPlayingSidebar />
     </div>
     <PlayerBar
+      v-show="route?.name !== 'Player'"
       :is-lyrics-open="isLyricsOpen"
       @open-lyrics="isLyricsOpen = !isLyricsOpen"
     />
@@ -46,6 +54,7 @@
 
 <script setup>
 import { onBeforeMount, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import PlayerBar from './components/PlayerBar.vue'
 import Sidebar from './components/Sidebar.vue'
 import NowPlayingSidebar from './components/NowPlayingSidebar.vue'
@@ -58,6 +67,7 @@ import { usePlayer } from './model/player'
 import { useLayout } from './model/layout'
 
 const isLyricsOpen = ref(false)
+const route = useRoute()
 const themeMgr = useBinaryThemeManager()
 const player = usePlayer()
 const layout = useLayout()
