@@ -81,4 +81,72 @@ describe('Lyrics Parser and Animator', () => {
     animator._loop(1100)
     expect(animator._interpolatedTime).toBe(20.0)
   })
+
+  it('safely estimates word timings for lines with irregular whitespace or empty content', () => {
+    const weirdSpacingLrc = `
+[00:10.00] \t   \t
+[00:15.00]
+[00:20.00] Downtify \t\t rocks   !
+    `.trim()
+
+    const parsed = parseLrc(weirdSpacingLrc)
+
+    expect(parsed).toHaveLength(3)
+
+    // 1. Pure whitespace line
+    expect(parsed[0].words).toEqual([])
+
+    // 2. Empty content line
+    expect(parsed[1].words).toEqual([])
+
+    // 3. Irregular tabs and spaces between valid words
+    const lineThreeWords = parsed[2].words
+    expect(lineThreeWords).toHaveLength(3)
+    expect(lineThreeWords[0].text).toBe('Downtify')
+    expect(lineThreeWords[1].text).toBe('rocks')
+    expect(lineThreeWords[2].text).toBe('!')
+
+    // Verify delays and durations calculated cleanly without NaN
+    for (const w of lineThreeWords) {
+      expect(Number.isNaN(w.duration)).toBe(false)
+      expect(Number.isNaN(w.delay)).toBe(false)
+      expect(w.duration).toBeGreaterThan(0)
+    }
+  })
+  it('gracefully skips invalid or malformed LRC lines', () => {
+    const malformedLrc = `
+[ar: Awesome Artist]
+[ti: Cool Song]
+Just some plain introductory text without brackets
+[invalid:time] Malformed bracket line
+[00:10.50] First valid lyric line
+[99:99.9999] Out of bounds regex line
+[00:15.20] Second valid lyric line
+    `.trim();
+
+    const parsed = parseLrc(malformedLrc);
+
+    // Should strictly parse only the 2 valid timestamp lines
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0].text).toBe('First valid lyric line');
+    expect(parsed[1].text).toBe('Second valid lyric line');
+  });
+
+  it('gracefully handles malformed enhanced word timings within a valid line', () => {
+    // Line is valid, but inner word tags contain malformed brackets
+    const mixedWordLrc = `[00:10.00] <00:10.10> Hello <broken:tag> world <00:10.50> !`;
+
+    const parsed = parseLrc(mixedWordLrc);
+
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0].words).toBeDefined();
+    // Ensure the parser didn't crash and extracted valid segments
+    expect(parsed[0].words.length).toBeGreaterThan(0);
+  });
+
+  it('handles non-string inputs gracefully', () => {
+    expect(parseLrc(null)).toEqual([]);
+    expect(parseLrc(undefined)).toEqual([]);
+    expect(parseLrc(123)).toEqual([]);
+  });
 })

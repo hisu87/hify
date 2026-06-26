@@ -39,15 +39,23 @@ def redact_sensitive_mapping(
             if any(fragment in lk for fragment in _SENSITIVE_SUBSTRINGS):
                 out[ks] = '<redacted>'
             else:
-                out[ks] = redact_sensitive_mapping(v, depth=depth + 1)
+                out[ks] = redact_sensitive_mapping(
+                    v, depth=depth + 1, max_depth=max_depth
+                )
         return out
     if isinstance(obj, list):
         if len(obj) > 120:
             head = [
-                redact_sensitive_mapping(x, depth=depth + 1) for x in obj[:120]
+                redact_sensitive_mapping(
+                    x, depth=depth + 1, max_depth=max_depth
+                )
+                for x in obj[:120]
             ]
             return head + [f'<{len(obj) - 120} more list items>']
-        return [redact_sensitive_mapping(x, depth=depth + 1) for x in obj]
+        return [
+            redact_sensitive_mapping(x, depth=depth + 1, max_depth=max_depth)
+            for x in obj
+        ]
     return obj
 
 
