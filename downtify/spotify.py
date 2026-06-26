@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import functools
+import copy
 import json
 import re
 from typing import Any, Optional
@@ -443,13 +444,21 @@ def _track_dict(
     }
 
 
-def track_from_id(track_id: str) -> dict[str, Any]:
+@functools.lru_cache(maxsize=512)
+def _cached_track_from_id(track_id: str) -> dict[str, Any]:
     payload = _fetch_embed_json('track', track_id)
     entity = _entity_from(payload)
     return _track_dict(entity, track_id=track_id)
 
 
-def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
+
+
+def track_from_id(track_id: str) -> dict[str, Any]:
+    return copy.deepcopy(_cached_track_from_id(track_id))
+
+
+@functools.lru_cache(maxsize=128)
+def _cached_album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
     payload = _fetch_embed_json('album', album_id)
     entity = _entity_from(payload)
     album_name = entity.get('name') or ''
@@ -491,6 +500,10 @@ def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
         row['album_track_total'] = album_track_total
         songs.append(row)
     return songs
+
+
+def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
+    return copy.deepcopy(_cached_album_tracks_from_id(album_id))
 
 
 def _parse_playlist_tracks(entity: dict[str, Any]) -> list[dict[str, Any]]:

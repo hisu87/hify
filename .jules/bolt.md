@@ -1,0 +1,3 @@
+## 2024-05-30 - [Caching Spotify Embed Data]
+**Learning:** Applying a generic `functools.lru_cache` to the base Spotify metadata fetcher `_fetch_embed_json` breaks background playlist monitoring (`downtify/monitor.py`) because playlists are dynamically updated by users. If cached, the background daemon repeatedly retrieves the initial HTML payload and never sees new tracks.
+**Action:** When caching metadata to avoid redundant network roundtrips (like the double-fetch during URL search + download initiation), isolate the `lru_cache` *only* to immutable entity functions like `track_from_id` and `album_tracks_from_id`, and ensure they return deep copies (`copy.deepcopy`) to prevent mutation bugs downstream.
