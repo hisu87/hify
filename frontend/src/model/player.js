@@ -113,7 +113,6 @@ function setPlaylist(files, options = {}) {
   }
 }
 
-
 function _playTrack(track, isGoingBack = false) {
   const a = ensureAudio()
 
@@ -140,7 +139,12 @@ function playAt(index) {
 }
 
 function play() {
-  if (playlist.value.length === 0 && userQueue.value.length === 0 && !currentTrack.value) return
+  if (
+    playlist.value.length === 0 &&
+    userQueue.value.length === 0 &&
+    !currentTrack.value
+  )
+    return
   const a = ensureAudio()
 
   if (!currentTrack.value) {
@@ -250,19 +254,21 @@ function prev() {
     userQueue.value.unshift(currentTrack.value)
   }
 
-  const idx = playlist.value.findIndex(t => t.url === prevTrack.url)
+  const idx = playlist.value.findIndex((t) => t.url === prevTrack.url)
   if (idx !== -1) currentIndex.value = idx
 
   _playTrack(prevTrack, true)
 }
 
 function addToQueue(fileOrTrack) {
-  const track = typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
+  const track =
+    typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
   userQueue.value.push(track)
 }
 
 function playNext(fileOrTrack) {
-  const track = typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
+  const track =
+    typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
   userQueue.value.unshift(track)
 }
 
@@ -293,7 +299,6 @@ function setShuffle(v) {
 function toggleShuffle() {
   setShuffle(!shuffle.value)
 }
-
 
 const progressPct = computed(() =>
   duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0

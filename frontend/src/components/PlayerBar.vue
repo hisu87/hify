@@ -188,10 +188,11 @@ const layout = useLayout()
 const coverFailed = ref(false)
 
 const currentTrack = computed(() => player.currentTrack.value)
-const hasTracks = computed(() =>
-  player.playlist.value.length > 0 ||
-  player.userQueue.value.length > 0 ||
-  player.currentTrack.value !== null
+const hasTracks = computed(
+  () =>
+    player.playlist.value.length > 0 ||
+    player.userQueue.value.length > 0 ||
+    player.currentTrack.value !== null
 )
 
 const trackTitle = computed(() => {
