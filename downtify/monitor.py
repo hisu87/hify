@@ -51,6 +51,15 @@ class MonitoredPlaylist:
         return asdict(self)
 
 
+_UPDATE_CLAUSES: dict[str, str] = {
+    'interval_minutes': 'interval_minutes = ?',
+    'enabled': 'enabled = ?',
+    'last_checked': 'last_checked = ?',
+    'last_track_count': 'last_track_count = ?',
+    'name': 'name = ?',
+}
+
+
 class PlaylistMonitorDB:
     def __init__(self, db_path: Path) -> None:
         self._path = str(db_path)
@@ -151,18 +160,20 @@ class PlaylistMonitorDB:
     def update_playlist(
         self, playlist_id: int, **kwargs: Any
     ) -> Optional[MonitoredPlaylist]:
-        allowed = {
-            'interval_minutes',
-            'enabled',
-            'last_checked',
-            'last_track_count',
-            'name',
-        }
-        updates = {k: v for k, v in kwargs.items() if k in allowed}
-        if not updates:
+        clauses: list[str] = []
+        values: list[Any] = []
+
+        # Iterate static clauses to guarantee zero user-key string interpolation
+        for col, clause in _UPDATE_CLAUSES.items():
+            if col in kwargs:
+                clauses.append(clause)
+                values.append(kwargs[col])
+
+        if not clauses:
             return self.get_playlist(playlist_id)
-        set_clause = ', '.join(f'{k} = ?' for k in updates)
-        values = list(updates.values()) + [playlist_id]
+
+        set_clause = ', '.join(clauses)
+        values.append(playlist_id)
         with self._connect() as conn:
             conn.execute(
                 f'UPDATE monitored_playlists SET {set_clause} WHERE id = ?',
