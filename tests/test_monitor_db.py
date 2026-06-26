@@ -8,12 +8,14 @@ from downtify.monitor import PlaylistMonitorDB
 
 @pytest.fixture
 def monitor_db(tmp_path: Path):
-    db_path = tmp_path / "test_monitor.db"
+    db_path = tmp_path / 'test_monitor.db'
     return PlaylistMonitorDB(db_path)
 
 
 def test_mark_tracks_downloaded_batch_correctness(monitor_db):
-    pl = monitor_db.add_playlist('spot_batch', 'Batch PL', 'https://open.spotify.com/playlist/…0')
+    pl = monitor_db.add_playlist(
+        'spot_batch', 'Batch PL', 'https://open.spotify.com/playlist/…0'
+    )
     batch_data = [
         ('track_1', '2026-06-26T10:00:00+00:00', 'file1.mp3'),
         ('track_2', '2026-06-26T10:01:00+00:00', 'file2.mp3'),
@@ -27,8 +29,12 @@ def test_mark_tracks_downloaded_batch_correctness(monitor_db):
 
 
 def test_benchmark_batch_vs_individual_insert(monitor_db):
-    pl_ind = monitor_db.add_playlist('pl_ind', 'Ind PL', 'https://open.spotify.com/playlist/…1')
-    pl_bat = monitor_db.add_playlist('pl_bat', 'Bat PL', 'https://open.spotify.com/playlist/…2')
+    pl_ind = monitor_db.add_playlist(
+        'pl_ind', 'Ind PL', 'https://open.spotify.com/playlist/…1'
+    )
+    pl_bat = monitor_db.add_playlist(
+        'pl_bat', 'Bat PL', 'https://open.spotify.com/playlist/…2'
+    )
 
     records_ct = 500
     mock_batch = [
@@ -39,7 +45,9 @@ def test_benchmark_batch_vs_individual_insert(monitor_db):
     # Measure N+1 Baseline
     t0 = time.perf_counter()
     for i in range(records_ct):
-        monitor_db.mark_track_downloaded(pl_ind.id, f'track_i_{i}', f'song_{i}.mp3')
+        monitor_db.mark_track_downloaded(
+            pl_ind.id, f'track_i_{i}', f'song_{i}.mp3'
+        )
     ind_duration = time.perf_counter() - t0
 
     # Measure Optimized Executemany Batch
@@ -48,7 +56,9 @@ def test_benchmark_batch_vs_individual_insert(monitor_db):
     batch_duration = time.perf_counter() - t0
 
     speedup = ind_duration / max(1e-9, batch_duration)
-    print(f"\n[Benchmark] 500 Inserts -> Individual: {ind_duration:.4f}s | Batch: {batch_duration:.4f}s ({speedup:.1f}x faster)")
+    print(
+        f'\n[Benchmark] 500 Inserts -> Individual: {ind_duration:.4f}s | Batch: {batch_duration:.4f}s ({speedup:.1f}x faster)'
+    )
 
     # Batch executemany should be overwhelmingly faster than 500 distinct ACID transactions
     assert batch_duration < ind_duration

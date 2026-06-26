@@ -21,7 +21,7 @@ import pytest
 
 def test_script_is_executable():
     if sys.platform == 'win32':
-        pytest.skip("Executable bit check not applicable on Windows")
+        pytest.skip('Executable bit check not applicable on Windows')
     assert SCRIPT.stat().st_mode & 0o111, 'version.sh is not executable'
 
 

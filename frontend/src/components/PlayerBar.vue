@@ -1,8 +1,19 @@
 <template>
-  <footer class="glass-player-bar fixed inset-x-0 bottom-0 z-[110]">
+  <footer
+    class="glass-player-bar fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] lg:bottom-0 z-[110]"
+    @touchstart="onTouchStart"
+    @touchend="onTouchEnd"
+  >
     <!-- Thin progress bar for mobile -->
-    <div class="absolute top-0 left-0 right-0 h-1 bg-black/10 dark:bg-white/10 lg:hidden" @click="onSeekClick" @pointerdown="onSeekStart">
-      <div class="player-progress-fill h-full transition-[width] duration-150" :style="`width: ${player.progressPct.value}%`" />
+    <div
+      class="absolute top-0 left-0 right-0 h-1 bg-black/10 dark:bg-white/10 lg:hidden"
+      @click="onSeekClick"
+      @pointerdown="onSeekStart"
+    >
+      <div
+        class="player-progress-fill h-full transition-[width] duration-150"
+        :style="`width: ${player.progressPct.value}%`"
+      />
     </div>
 
     <div
@@ -42,20 +53,32 @@
         </div>
       </div>
 
-      <!-- Mobile controls -->
-      <div class="flex items-center gap-2 lg:hidden">
+      <div class="flex items-center gap-1 sm:gap-2 lg:hidden">
         <button
-          class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#FA233B] text-white shadow-[0_0_16px_rgba(250,35,59,0.25)] transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] hover:scale-105 active:scale-95 disabled:opacity-50"
+          class="icon-btn h-11 w-11 min-w-[44px] min-h-[44px]"
+          :class="{ 'text-[#FA233B]': isLyricsOpen }"
+          :disabled="!hasTracks"
+          @click="$emit('open-lyrics')"
+          title="Lyrics"
+        >
+          <Icon icon="clarity:note-line" class="h-6 w-6" />
+        </button>
+        <button
+          class="inline-flex h-11 w-11 min-w-[44px] min-h-[44px] items-center justify-center rounded-full bg-[#FA233B] text-white shadow-[0_0_16px_rgba(250,35,59,0.25)] transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] hover:scale-105 active:scale-95 disabled:opacity-50"
           @click="player.toggle()"
           :disabled="!hasTracks"
         >
           <Icon
-            :icon="player.isPlaying.value ? 'clarity:pause-solid' : 'clarity:play-solid'"
+            :icon="
+              player.isPlaying.value
+                ? 'clarity:pause-solid'
+                : 'clarity:play-solid'
+            "
             class="h-5 w-5"
           />
         </button>
         <button
-          class="icon-btn h-10 w-10"
+          class="icon-btn h-11 w-11 min-w-[44px] min-h-[44px]"
           @click="player.next()"
           :disabled="!hasTracks"
         >
@@ -64,7 +87,9 @@
       </div>
 
       <!-- Desktop controls -->
-      <div class="hidden min-w-0 lg:flex flex-col items-center justify-center gap-1.5">
+      <div
+        class="hidden min-w-0 lg:flex flex-col items-center justify-center gap-1.5"
+      >
         <div class="flex items-center gap-2 sm:gap-3">
           <button
             class="icon-btn"
@@ -253,5 +278,33 @@ function onSeekClick(event) {
 
 function onSeekStart(event) {
   onSeekClick(event)
+}
+
+let touchStartX = 0
+let touchStartY = 0
+
+function onTouchStart(event) {
+  touchStartX = event.changedTouches[0].screenX
+  touchStartY = event.changedTouches[0].screenY
+}
+
+function onTouchEnd(event) {
+  const touchEndX = event.changedTouches[0].screenX
+  const touchEndY = event.changedTouches[0].screenY
+
+  const diffX = touchEndX - touchStartX
+  const diffY = touchEndY - touchStartY
+
+  // Mostly horizontal swipe
+  if (Math.abs(diffX) > Math.abs(diffY)) {
+    // Swipe left to right -> Prev
+    if (diffX > 50) {
+      if (hasTracks.value) player.prev()
+    }
+    // Swipe right to left -> Next
+    else if (diffX < -50) {
+      if (hasTracks.value) player.next()
+    }
+  }
 }
 </script>

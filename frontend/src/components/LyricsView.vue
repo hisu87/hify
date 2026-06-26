@@ -3,6 +3,8 @@
     <div
       v-if="isOpen"
       class="lyrics-root fixed inset-0 z-[100] flex flex-col overflow-hidden"
+      @touchstart="onTouchStart"
+      @touchend="onTouchEnd"
     >
       <!-- ─── Background (blurred album art) ─── -->
       <div class="lyrics-bg" :style="bgStyle"></div>
@@ -218,6 +220,30 @@ function close() {
   emit('close')
 }
 
+// ─── Touch gestures ───────────────────────────────────────────────────────────
+let touchStartX = 0
+let touchStartY = 0
+
+function onTouchStart(event) {
+  if (event.touches.length !== 1) return
+  touchStartX = event.touches[0].screenX
+  touchStartY = event.touches[0].screenY
+}
+
+function onTouchEnd(event) {
+  if (event.changedTouches.length !== 1) return
+  const touchEndX = event.changedTouches[0].screenX
+  const touchEndY = event.changedTouches[0].screenY
+
+  const diffX = Math.abs(touchEndX - touchStartX)
+  const diffY = touchEndY - touchStartY
+
+  // If swiped down significantly (more than 80px) and mostly vertical
+  if (diffY > 80 && diffY > diffX * 1.5) {
+    close()
+  }
+}
+
 // ─── Fetch ────────────────────────────────────────────────────────────────────
 async function prefetchLyrics() {
   if (!currentTrack.value) return
@@ -369,6 +395,7 @@ function applyLyrics(lines) {
 .lyrics-root {
   color: white;
   font-family: 'Tahoma', 'Geneva', sans-serif;
+  overscroll-behavior: contain;
 }
 
 /* ─── Background ─────────────────────────────────────────────────────────────── */

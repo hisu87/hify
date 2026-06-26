@@ -155,5 +155,7 @@ def test_enrich_preserves_preset_track_number(monkeypatch):
         ({'duration': '3:15'}, 0),
     ],
 )
-def test_parse_duration_handles_all_scrape_formats(raw_input, expected_seconds):
+def test_parse_duration_handles_all_scrape_formats(
+    raw_input, expected_seconds
+):
     assert _parse_duration(raw_input) == expected_seconds

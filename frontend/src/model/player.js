@@ -44,6 +44,7 @@ function ensureAudio() {
     if (!rafId) {
       rafId = requestAnimationFrame(updateTime)
     }
+    updateMediaSessionPosition()
   })
   audio.addEventListener('pause', () => {
     isPlaying.value = false
@@ -53,6 +54,7 @@ function ensureAudio() {
     }
     // Final sync
     if (audio) currentTime.value = audio.currentTime
+    updateMediaSessionPosition()
   })
   setupMediaSession()
   return audio
@@ -154,6 +156,7 @@ function seek(seconds) {
   const clamped = Math.max(0, Math.min(max, seconds))
   a.currentTime = clamped
   currentTime.value = clamped
+  updateMediaSessionPosition()
 }
 
 function seekRatio(ratio) {
@@ -276,15 +279,33 @@ function updateMediaSession() {
     const track = currentTrack.value
     // Use full URL for cover so MediaSession correctly resolves it
     const coverFullUrl = new URL(track.cover, window.location.origin).href
-    
+
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title,
       artist: track.artist,
       album: 'Downtify',
-      artwork: [
-        { src: coverFullUrl, sizes: '512x512', type: 'image/jpeg' }
-      ]
+      artwork: [{ src: coverFullUrl, sizes: '512x512', type: 'image/jpeg' }],
     })
+    updateMediaSessionPosition()
+  }
+}
+
+function updateMediaSessionPosition() {
+  if (
+    'mediaSession' in navigator &&
+    audio &&
+    isFinite(audio.duration) &&
+    audio.duration > 0
+  ) {
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: audio.duration,
+        playbackRate: audio.playbackRate,
+        position: audio.currentTime,
+      })
+    } catch (e) {
+      // Ignore errors if position state is invalid
+    }
   }
 }
 

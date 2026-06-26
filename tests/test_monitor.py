@@ -12,8 +12,8 @@ def test_is_due_returns_true_when_last_checked_is_none():
 
 
 def test_is_due_returns_true_on_corrupted_or_invalid_date_string():
-    assert _is_due("not-an-iso-timestamp", interval_minutes=60) is True
-    assert _is_due("2026-13-45", interval_minutes=60) is True
+    assert _is_due('not-an-iso-timestamp', interval_minutes=60) is True
+    assert _is_due('2026-13-45', interval_minutes=60) is True
 
 
 def test_is_due_returns_true_when_configured_interval_has_elapsed():

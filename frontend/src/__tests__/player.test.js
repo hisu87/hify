@@ -13,7 +13,9 @@ describe('trackInfoFromFile', () => {
   })
 
   it('parses a filename with an artist and title separated by " - "', () => {
-    const result = trackInfoFromFile('Rick Astley - Never Gonna Give You Up.flac')
+    const result = trackInfoFromFile(
+      'Rick Astley - Never Gonna Give You Up.flac'
+    )
 
     expect(result.title).toBe('Never Gonna Give You Up')
     expect(result.artist).toBe('Rick Astley')

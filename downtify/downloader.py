@@ -118,7 +118,6 @@ class Downloader:
     """Wraps ``yt-dlp`` plus ``mutagen`` tagging."""
 
     def __init__(  # noqa: PLR0913
-
         self,
         download_dir: Path | str,
         audio_format: str = 'mp3',
@@ -563,7 +562,9 @@ def _tag_mp4(path: Path, tags: TrackTags) -> None:
     if tags.album:
         audio['\xa9alb'] = tags.album
     if tags.track_number is not None:
-        total = tags.album_track_total if tags.album_track_total is not None else 0
+        total = (
+            tags.album_track_total if tags.album_track_total is not None else 0
+        )
         audio['trkn'] = [(tags.track_number, total)]
     if tags.recording_date:
         audio['\xa9day'] = tags.recording_date

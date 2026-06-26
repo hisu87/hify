@@ -20,7 +20,7 @@
     </div>
 
     <LyricsView :is-open="isLyricsOpen" @close="isLyricsOpen = false" />
-    <div class="flex min-h-dvh w-full overflow-hidden pb-[88px] lg:pb-[96px]">
+    <div class="flex min-h-dvh w-full overflow-hidden pb-[136px] lg:pb-[96px]">
       <Sidebar />
       <main class="relative flex-1 min-w-0 transition-all duration-300">
         <div
@@ -39,6 +39,7 @@
       :is-lyrics-open="isLyricsOpen"
       @open-lyrics="isLyricsOpen = !isLyricsOpen"
     />
+    <MobileNav />
     <Settings />
   </div>
 </template>
@@ -50,6 +51,7 @@ import Sidebar from './components/Sidebar.vue'
 import NowPlayingSidebar from './components/NowPlayingSidebar.vue'
 import Settings from './components/Settings.vue'
 import LyricsView from './components/LyricsView.vue'
+import MobileNav from './components/MobileNav.vue'
 import { useBinaryThemeManager } from './model/theme'
 import { useDynamicTheme } from './model/dynamicTheme'
 import { usePlayer } from './model/player'

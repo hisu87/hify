@@ -122,31 +122,31 @@ Just some plain introductory text without brackets
 [00:10.50] First valid lyric line
 [99:99.9999] Out of bounds regex line
 [00:15.20] Second valid lyric line
-    `.trim();
+    `.trim()
 
-    const parsed = parseLrc(malformedLrc);
+    const parsed = parseLrc(malformedLrc)
 
     // Should strictly parse only the 2 valid timestamp lines
-    expect(parsed).toHaveLength(2);
-    expect(parsed[0].text).toBe('First valid lyric line');
-    expect(parsed[1].text).toBe('Second valid lyric line');
-  });
+    expect(parsed).toHaveLength(2)
+    expect(parsed[0].text).toBe('First valid lyric line')
+    expect(parsed[1].text).toBe('Second valid lyric line')
+  })
 
   it('gracefully handles malformed enhanced word timings within a valid line', () => {
     // Line is valid, but inner word tags contain malformed brackets
-    const mixedWordLrc = `[00:10.00] <00:10.10> Hello <broken:tag> world <00:10.50> !`;
+    const mixedWordLrc = `[00:10.00] <00:10.10> Hello <broken:tag> world <00:10.50> !`
 
-    const parsed = parseLrc(mixedWordLrc);
+    const parsed = parseLrc(mixedWordLrc)
 
-    expect(parsed).toHaveLength(1);
-    expect(parsed[0].words).toBeDefined();
+    expect(parsed).toHaveLength(1)
+    expect(parsed[0].words).toBeDefined()
     // Ensure the parser didn't crash and extracted valid segments
-    expect(parsed[0].words.length).toBeGreaterThan(0);
-  });
+    expect(parsed[0].words.length).toBeGreaterThan(0)
+  })
 
   it('handles non-string inputs gracefully', () => {
-    expect(parseLrc(null)).toEqual([]);
-    expect(parseLrc(undefined)).toEqual([]);
-    expect(parseLrc(123)).toEqual([]);
-  });
+    expect(parseLrc(null)).toEqual([])
+    expect(parseLrc(undefined)).toEqual([])
+    expect(parseLrc(123)).toEqual([])
+  })
 })
