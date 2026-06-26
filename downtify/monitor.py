@@ -202,6 +202,28 @@ class PlaylistMonitorDB:
                 (playlist_id, track_spotify_id, _now_iso(), filename),
             )
 
+    def mark_tracks_downloaded(
+        self,
+        playlist_id: int,
+        tracks: list[tuple[str, str, Optional[str]]],
+    ) -> None:
+        """Batch insert ``[(track_spotify_id, downloaded_at, filename)]`` records."""
+        if not tracks:
+            return
+        payload = [
+            (playlist_id, tid, dt, fname) for tid, dt, fname in tracks
+        ]
+        with self._connect() as conn:
+            conn.executemany(
+                """INSERT INTO downloaded_tracks
+                   (playlist_id, track_spotify_id, downloaded_at, filename)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(playlist_id, track_spotify_id) DO UPDATE SET
+                   downloaded_at=excluded.downloaded_at,
+                   filename=excluded.filename""",
+                payload,
+            )
+
 
 def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
     return MonitoredPlaylist(
@@ -271,6 +293,8 @@ async def check_playlist(
         )
 
     downloaded = 0
+    batch_records: list[tuple[str, str, Optional[str]]] = []
+
     for song in new_tracks:
         track_id = song['song_id']
         pl_name = playlist.name
@@ -319,12 +343,15 @@ async def check_playlist(
                     s, _make_cb(s, pl_name), subdir=pl_subdir
                 ),
             )
-            await asyncio.to_thread(
-                db.mark_track_downloaded, playlist.id, track_id, filename
-            )
+            batch_records.append((track_id, _now_iso(), filename))
             downloaded += 1
         except Exception:
             logger.exception('Failed to auto-download track {}', track_id)
+
+    if batch_records:
+        await asyncio.to_thread(
+            db.mark_tracks_downloaded, playlist.id, batch_records
+        )
 
     await asyncio.to_thread(
         db.update_playlist,
