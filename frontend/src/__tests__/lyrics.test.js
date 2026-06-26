@@ -82,6 +82,37 @@ describe('Lyrics Parser and Animator', () => {
     expect(animator._interpolatedTime).toBe(20.0)
   })
 
+  it('safely estimates word timings for lines with irregular whitespace or empty content', () => {
+    const weirdSpacingLrc = `
+[00:10.00] \t   \t
+[00:15.00]
+[00:20.00] Downtify \t\t rocks   !
+    `.trim()
+
+    const parsed = parseLrc(weirdSpacingLrc)
+
+    expect(parsed).toHaveLength(3)
+
+    // 1. Pure whitespace line
+    expect(parsed[0].words).toEqual([])
+
+    // 2. Empty content line
+    expect(parsed[1].words).toEqual([])
+
+    // 3. Irregular tabs and spaces between valid words
+    const lineThreeWords = parsed[2].words
+    expect(lineThreeWords).toHaveLength(3)
+    expect(lineThreeWords[0].text).toBe('Downtify')
+    expect(lineThreeWords[1].text).toBe('rocks')
+    expect(lineThreeWords[2].text).toBe('!')
+
+    // Verify delays and durations calculated cleanly without NaN
+    for (const w of lineThreeWords) {
+      expect(Number.isNaN(w.duration)).toBe(false)
+      expect(Number.isNaN(w.delay)).toBe(false)
+      expect(w.duration).toBeGreaterThan(0)
+    }
+  })
   it('gracefully skips invalid or malformed LRC lines', () => {
     const malformedLrc = `
 [ar: Awesome Artist]
