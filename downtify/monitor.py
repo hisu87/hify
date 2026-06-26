@@ -221,9 +221,7 @@ class PlaylistMonitorDB:
         """Batch insert ``[(track_spotify_id, downloaded_at, filename)]`` records."""
         if not tracks:
             return
-        payload = [
-            (playlist_id, tid, dt, fname) for tid, dt, fname in tracks
-        ]
+        payload = [(playlist_id, tid, dt, fname) for tid, dt, fname in tracks]
         with self._connect() as conn:
             conn.executemany(
                 """INSERT INTO downloaded_tracks
@@ -250,7 +248,7 @@ def _row_to_playlist(row: sqlite3.Row) -> MonitoredPlaylist:
     )
 
 
-async def check_playlist(
+async def check_playlist(  # noqa: PLR0913
     playlist: MonitoredPlaylist,
     db: PlaylistMonitorDB,
     downloader: Downloader,
@@ -306,32 +304,39 @@ async def check_playlist(
     downloaded = 0
     batch_records: list[tuple[str, str, Optional[str]]] = []
 
+    # Fetch all missing per-track metadata concurrently, with a limit to avoid rate limits
+    semaphore = asyncio.Semaphore(10)
+
+    async def _fetch_metadata(song: dict[str, Any]) -> None:
+        track_id = song.get('song_id')
+        if not track_id:
+            return
+        async with semaphore:
+            try:
+                full = await asyncio.to_thread(spotify.track_from_id, track_id)
+                for key in (
+                    'cover_url',
+                    'year',
+                    'release_date',
+                    'album_name',
+                    'artists',
+                ):
+                    value = full.get(key)
+                    if value:
+                        song[key] = value
+            except Exception:
+                logger.opt(exception=True).warning(
+                    'Per-track Spotify fetch failed for {}; '
+                    'falling back to playlist data',
+                    track_id,
+                )
+
+    if new_tracks:
+        await asyncio.gather(*(_fetch_metadata(s) for s in new_tracks))
+
     for song in new_tracks:
         track_id = song['song_id']
         pl_name = playlist.name
-
-        # Playlist embed entries are missing release year and use the
-        # playlist cover instead of the album cover. Re-fetching the track
-        # embed gives us both per-track. We still keep the playlist values
-        # as a fallback if the per-track fetch fails for any reason.
-        try:
-            full = await asyncio.to_thread(spotify.track_from_id, track_id)
-            for key in (
-                'cover_url',
-                'year',
-                'release_date',
-                'album_name',
-                'artists',
-            ):
-                value = full.get(key)
-                if value:
-                    song[key] = value
-        except Exception:
-            logger.opt(exception=True).warning(
-                'Per-track Spotify fetch failed for {}; '
-                'falling back to playlist data',
-                track_id,
-            )
 
         def _make_cb(s: dict, name: str) -> Callable[[float, str], None]:
             def _cb(pct: float, message: str) -> None:
