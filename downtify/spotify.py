@@ -7,6 +7,7 @@ authentication and no premium account are required.
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 from typing import Any, Optional
@@ -337,6 +338,7 @@ def _release_date_raw_from_field(release: Any, *, _depth: int = 0) -> str:
     return ''
 
 
+@functools.lru_cache(maxsize=1024)
 def _album_release_date_from_open_page(album_id: str) -> str:
     """Parse release date from the public album HTML when embed omits it."""
 

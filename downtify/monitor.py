@@ -51,6 +51,15 @@ class MonitoredPlaylist:
         return asdict(self)
 
 
+_UPDATE_CLAUSES: dict[str, str] = {
+    'interval_minutes': 'interval_minutes = ?',
+    'enabled': 'enabled = ?',
+    'last_checked': 'last_checked = ?',
+    'last_track_count': 'last_track_count = ?',
+    'name': 'name = ?',
+}
+
+
 class PlaylistMonitorDB:
     def __init__(self, db_path: Path) -> None:
         self._path = str(db_path)
@@ -151,18 +160,20 @@ class PlaylistMonitorDB:
     def update_playlist(
         self, playlist_id: int, **kwargs: Any
     ) -> Optional[MonitoredPlaylist]:
-        allowed = {
-            'interval_minutes',
-            'enabled',
-            'last_checked',
-            'last_track_count',
-            'name',
-        }
-        updates = {k: v for k, v in kwargs.items() if k in allowed}
-        if not updates:
+        clauses: list[str] = []
+        values: list[Any] = []
+
+        # Iterate static clauses to guarantee zero user-key string interpolation
+        for col, clause in _UPDATE_CLAUSES.items():
+            if col in kwargs:
+                clauses.append(clause)
+                values.append(kwargs[col])
+
+        if not clauses:
             return self.get_playlist(playlist_id)
-        set_clause = ', '.join(f'{k} = ?' for k in updates)
-        values = list(updates.values()) + [playlist_id]
+
+        set_clause = ', '.join(clauses)
+        values.append(playlist_id)
         with self._connect() as conn:
             conn.execute(
                 f'UPDATE monitored_playlists SET {set_clause} WHERE id = ?',
@@ -200,6 +211,28 @@ class PlaylistMonitorDB:
                    downloaded_at=excluded.downloaded_at,
                    filename=excluded.filename""",
                 (playlist_id, track_spotify_id, _now_iso(), filename),
+            )
+
+    def mark_tracks_downloaded(
+        self,
+        playlist_id: int,
+        tracks: list[tuple[str, str, Optional[str]]],
+    ) -> None:
+        """Batch insert ``[(track_spotify_id, downloaded_at, filename)]`` records."""
+        if not tracks:
+            return
+        payload = [
+            (playlist_id, tid, dt, fname) for tid, dt, fname in tracks
+        ]
+        with self._connect() as conn:
+            conn.executemany(
+                """INSERT INTO downloaded_tracks
+                   (playlist_id, track_spotify_id, downloaded_at, filename)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(playlist_id, track_spotify_id) DO UPDATE SET
+                   downloaded_at=excluded.downloaded_at,
+                   filename=excluded.filename""",
+                payload,
             )
 
 
@@ -271,6 +304,8 @@ async def check_playlist(
         )
 
     downloaded = 0
+    batch_records: list[tuple[str, str, Optional[str]]] = []
+
     for song in new_tracks:
         track_id = song['song_id']
         pl_name = playlist.name
@@ -319,12 +354,15 @@ async def check_playlist(
                     s, _make_cb(s, pl_name), subdir=pl_subdir
                 ),
             )
-            await asyncio.to_thread(
-                db.mark_track_downloaded, playlist.id, track_id, filename
-            )
+            batch_records.append((track_id, _now_iso(), filename))
             downloaded += 1
         except Exception:
             logger.exception('Failed to auto-download track {}', track_id)
+
+    if batch_records:
+        await asyncio.to_thread(
+            db.mark_tracks_downloaded, playlist.id, batch_records
+        )
 
     await asyncio.to_thread(
         db.update_playlist,
