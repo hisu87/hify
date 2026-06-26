@@ -304,12 +304,19 @@ class Downloader:
         ffmpeg_path = shutil.which('ffmpeg')
         if not ffmpeg_path and os.name == 'nt':
             # Check common winget install paths
-            winget_path = Path(os.environ.get('LOCALAPPDATA', '')) / 'Microsoft' / 'WinGet' / 'Packages'
+            winget_path = (
+                Path(os.environ.get('LOCALAPPDATA', ''))
+                / 'Microsoft'
+                / 'WinGet'
+                / 'Packages'
+            )
             if winget_path.exists():
                 for p in winget_path.rglob('ffmpeg.exe'):
                     if 'bin' in p.parts:
                         ydl_opts['ffmpeg_location'] = str(p.parent)
-                        logger.info('Found ffmpeg in winget path: {}', p.parent)
+                        logger.info(
+                            'Found ffmpeg in winget path: {}', p.parent
+                        )
                         break
 
         # Many container setups have IPv6 advertised but unroutable for

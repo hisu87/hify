@@ -259,3 +259,25 @@ def test_album_tracks_from_id_merges_row_subtitle():
     assert songs[0]['album_name'] == 'TestAlbum'
     assert songs[0]['track_number'] == 1
     assert songs[0]['album_track_total'] == 1
+
+
+def test_album_release_date_open_page_is_cached():
+    """Verify identical album ID lookups trigger only one network HTTP dispatch."""
+    # Clear cache state to ensure clean test execution
+    _album_release_date_from_open_page.cache_clear()
+
+    mock_resp = MagicMock()
+    mock_resp.text = '<meta name="music:release_date" content="1997-05-21"/>'
+    mock_resp.raise_for_status = lambda: None
+
+    with patch(
+        'downtify.spotify.requests.get', return_value=mock_resp
+    ) as mock_get:
+        res1 = _album_release_date_from_open_page('cacheTestAlbum123')
+        res2 = _album_release_date_from_open_page('cacheTestAlbum123')
+
+        assert res1 == '1997-05-21'
+        assert res2 == '1997-05-21'
+        # Network must only be hit once
+        assert mock_get.call_count == 1
+        assert _album_release_date_from_open_page.cache_info().hits == 1

@@ -44,7 +44,9 @@ def fetch(song: dict[str, Any], providers: list[str]) -> Optional[Lyrics]:
     return None
 
 
-def _fallback_search_lrclib(title: str, artist: str) -> Optional[dict[str, Any]]:
+def _fallback_search_lrclib(
+    title: str, artist: str
+) -> Optional[dict[str, Any]]:
     search_params = {
         'track_name': title,
         'artist_name': artist,
@@ -61,7 +63,7 @@ def _fallback_search_lrclib(title: str, artist: str) -> Optional[dict[str, Any]]
         results = response.json()
         if not results or not isinstance(results, list):
             return None
-            
+
         for result in results:
             if result.get('syncedLyrics'):
                 return result
