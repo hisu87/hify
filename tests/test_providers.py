@@ -6,6 +6,7 @@ import pytest
 
 from downtify import providers
 from downtify.providers import (
+    _parse_duration,
     enrich_from_match,
     youtube_music_track_index_for_match,
 )
@@ -125,3 +126,34 @@ def test_enrich_preserves_preset_track_number(monkeypatch):
     )
     assert out['track_number'] == 7
     assert out['album_track_total'] == 11
+
+
+@pytest.mark.parametrize(
+    ('raw_input', 'expected_seconds'),
+    [
+        # 1. Standard integer pass-through
+        (210, 210),
+        (0, 0),
+        # 2. Standard MM:SS strings
+        ('3:15', 195),
+        ('0:45', 45),
+        ('10:00', 600),
+        # 3. Long-form HH:MM:SS strings
+        ('1:02:30', 3750),
+        ('2:00:00', 7200),
+        # 4. Malformed or non-numeric strings
+        ('invalid_text', 0),
+        ('12:xx', 0),
+        ('', 0),
+        # 5. Out-of-bounds colon segments (1 part or 4+ parts)
+        ('180', 0),
+        ('1:2:3:4', 0),
+        # 6. Non-string / Non-int arbitrary objects
+        (None, 0),
+        (125.85, 0),  # Floats fail isinstance(x, int) and return 0
+        (['3:15'], 0),
+        ({'duration': '3:15'}, 0),
+    ],
+)
+def test_parse_duration_handles_all_scrape_formats(raw_input, expected_seconds):
+    assert _parse_duration(raw_input) == expected_seconds
