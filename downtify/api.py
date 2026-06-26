@@ -330,7 +330,11 @@ async def download_endpoint(
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
-    song = _song_for_download(url)
+    try:
+        song = await asyncio.to_thread(_song_for_download, url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     tn_before = song.get('track_number')
     yr_before = song.get('year') or song.get('release_date')
     _merge_client_track_hints(song, client_hints)
