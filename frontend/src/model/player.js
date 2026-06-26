@@ -11,6 +11,9 @@ const volume = ref(parseFloat(localStorage.getItem(VOLUME_KEY) || '0.85'))
 const isMuted = ref(false)
 const repeatMode = ref('off') // 'off' | 'all' | 'one'
 const shuffle = ref(false)
+const userQueue = ref([])
+const history = ref([])
+const currentTrack = ref(null)
 
 let audio = null
 let shuffleOrder = []
@@ -110,30 +113,46 @@ function setPlaylist(files, options = {}) {
   }
 }
 
+function _playTrack(track, isGoingBack = false) {
+  const a = ensureAudio()
+
+  if (currentTrack.value && !isGoingBack) {
+    history.value.push(currentTrack.value)
+  }
+
+  currentTrack.value = track
+  a.src = track.url
+  a.currentTime = 0
+  currentTime.value = 0
+  a.play().catch(() => {})
+}
+
 function playAt(index) {
   if (index < 0 || index >= playlist.value.length) return
-  const a = ensureAudio()
   currentIndex.value = index
   if (shuffle.value) {
     if (shuffleOrder.length !== playlist.value.length) buildShuffleOrder()
     const pos = shuffleOrder.indexOf(index)
     if (pos >= 0) shufflePos = pos
   }
-  a.src = playlist.value[index].url
-  a.currentTime = 0
-  currentTime.value = 0
-  a.play().catch(() => {})
+  _playTrack(playlist.value[index])
 }
 
 function play() {
-  if (playlist.value.length === 0) return
+  if (
+    playlist.value.length === 0 &&
+    userQueue.value.length === 0 &&
+    !currentTrack.value
+  )
+    return
   const a = ensureAudio()
-  if (currentIndex.value < 0) {
-    playAt(0)
+
+  if (!currentTrack.value) {
+    next()
     return
   }
   if (!a.src) {
-    a.src = playlist.value[currentIndex.value].url
+    a.src = currentTrack.value.url
   }
   a.play().catch(() => {})
 }
@@ -209,6 +228,11 @@ function prevIndex() {
 }
 
 function next() {
+  if (userQueue.value.length > 0) {
+    _playTrack(userQueue.value.shift())
+    return
+  }
+
   const i = nextIndex()
   if (i < 0) {
     pause()
@@ -219,13 +243,33 @@ function next() {
 
 function prev() {
   const a = ensureAudio()
-  if (a.currentTime > 3) {
+  if (a.currentTime > 3 || history.value.length === 0) {
     seek(0)
     return
   }
-  const i = prevIndex()
-  if (i < 0) return
-  playAt(i)
+
+  const prevTrack = history.value.pop()
+
+  if (currentTrack.value) {
+    userQueue.value.unshift(currentTrack.value)
+  }
+
+  const idx = playlist.value.findIndex((t) => t.url === prevTrack.url)
+  if (idx !== -1) currentIndex.value = idx
+
+  _playTrack(prevTrack, true)
+}
+
+function addToQueue(fileOrTrack) {
+  const track =
+    typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
+  userQueue.value.push(track)
+}
+
+function playNext(fileOrTrack) {
+  const track =
+    typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
+  userQueue.value.unshift(track)
 }
 
 function onEnded() {
@@ -256,12 +300,6 @@ function toggleShuffle() {
   setShuffle(!shuffle.value)
 }
 
-const currentTrack = computed(() =>
-  currentIndex.value >= 0 && currentIndex.value < playlist.value.length
-    ? playlist.value[currentIndex.value]
-    : null
-)
-
 const progressPct = computed(() =>
   duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0
 )
@@ -281,6 +319,8 @@ export function trackInfoFromFile(file) {
 export function usePlayer() {
   return {
     playlist,
+    userQueue,
+    history,
     currentIndex,
     currentTrack,
     isPlaying,
@@ -292,6 +332,8 @@ export function usePlayer() {
     repeatMode,
     shuffle,
     setPlaylist,
+    addToQueue,
+    playNext,
     playAt,
     play,
     pause,
