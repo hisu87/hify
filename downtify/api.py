@@ -186,9 +186,9 @@ async def get_lyrics_endpoint(id: str):
 
 @router.get('/api/v1/lyrics/search')
 async def search_lyrics_endpoint(
-    title: str, artist: str = '', album: str = '', duration_ms: int = 0
+    title: str = '', artist: str = '', album: str = '', duration_ms: int = 0, file: str = '', track_id: str = ''
 ):
-    key = f'search:{title}:{artist}:{album}:{duration_ms}'
+    key = f'search:{title}:{artist}:{album}:{duration_ms}:{file}:{track_id}'
     if key in _INFLIGHT_RESOLVES:
         logger.debug(f'Coalescing stampede request for search {key}...')
         return await _INFLIGHT_RESOLVES[key]
@@ -198,8 +198,51 @@ async def search_lyrics_endpoint(
     _INFLIGHT_RESOLVES[key] = fut
 
     try:
+        from main import DOWNLOAD_DIR
+
+        safe_path = None
+        if file:
+            safe_path = (DOWNLOAD_DIR.resolve() / file).resolve()
+            if not safe_path.is_relative_to(DOWNLOAD_DIR.resolve()):
+                raise HTTPException(403, "Access Denied")
+
+        # TẦNG 1: Tìm sidecar <file>.lrc local
+        if safe_path:
+            lrc_path = safe_path.with_suffix(".lrc")
+            if lrc_path.exists():
+                text = lrc_path.read_text(encoding="utf-8")
+                parsed = lyrics.parse_enhanced_lrc(text)
+                if parsed:
+                    ast = lyrics.NormalizedLyrics(
+                        track_id=track_id,
+                        isrc=None,
+                        provider_name='local',
+                        sync_level='word' if any(line.lead for line in parsed) else 'line',
+                        lines=parsed
+                    )
+                    ast.granularity = ast.sync_level
+                    fut.set_result(ast)
+                    return ast
+
+        # TẦNG 2: Tìm lời nhúng sẵn trong ID3 của chính file audio đó
+        if safe_path and safe_path.exists():
+            embedded_text = lyrics.extract_raw_id3_lyrics(safe_path)
+            if embedded_text:
+                parsed = lyrics.parse_enhanced_lrc(embedded_text)
+                if parsed:
+                    ast = lyrics.NormalizedLyrics(
+                        track_id=track_id,
+                        isrc=None,
+                        provider_name='id3',
+                        sync_level='word' if any(line.lead for line in parsed) else 'line',
+                        lines=parsed
+                    )
+                    ast.granularity = ast.sync_level
+                    fut.set_result(ast)
+                    return ast
+
         track_dict = {
-            'id': '',
+            'id': track_id,
             'title': title,
             'artist': artist,
             'subtitle': artist,
@@ -221,6 +264,10 @@ async def search_lyrics_endpoint(
 
         resolver = lyrics.LyricsResolver(providers=provider_instances)
         lyrics_ast = await resolver.resolve(track_dict)
+
+        # TẦNG 4: Ghi sidecar ngầm
+        if lyrics_ast and safe_path:
+            lyrics.save_sidecar_lrc(safe_path, lyrics_ast.to_sidecar_lrc())
 
         fut.set_result(lyrics_ast)
         return lyrics_ast

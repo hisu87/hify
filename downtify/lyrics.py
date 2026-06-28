@@ -10,6 +10,7 @@ import asyncio
 import os
 from dataclasses import dataclass
 from typing import Any, Optional, Protocol
+from pathlib import Path
 
 from loguru import logger
 
@@ -53,6 +54,7 @@ class NormalizedLyrics:
     provider_name: str
     sync_level: str  # 'syllable', 'word', 'line', 'plain'
     lines: list[NormalizedLine]
+    granularity: str = ""
 
     def to_sidecar_lrc(self) -> str:
         """Render to enhanced/kinetic LRC format for external players."""
@@ -299,6 +301,49 @@ def parse_amll_ttml(xml_str: str) -> list[NormalizedLine]:
     return lines
 
 
+def extract_raw_id3_lyrics(path: Path) -> Optional[str]:
+    """Extract embedded plain lyrics from audio tag without external libraries (using mutagen)."""
+    try:
+        from mutagen.flac import FLAC
+        from mutagen.id3 import ID3
+        from mutagen.mp4 import MP4
+        from mutagen.oggopus import OggOpus
+        from mutagen.oggvorbis import OggVorbis
+
+        suffix = path.suffix.lower().lstrip('.')
+        if suffix == 'mp3':
+            tag = ID3(str(path))
+            for frame in tag.getall('USLT'):
+                if frame.text:
+                    return str(frame.text)
+        elif suffix == 'flac':
+            f = FLAC(str(path))
+            return f.get('lyrics', [None])[0]
+        elif suffix in {'m4a', 'mp4', 'aac'}:
+            m = MP4(str(path))
+            return m.tags.get('\xa9lyr', [None])[0] if m.tags else None
+        elif suffix in {'ogg', 'oga'}:
+            o = OggVorbis(str(path))
+            return o.get('lyrics', [None])[0]
+        elif suffix == 'opus':
+            o = OggOpus(str(path))
+            return o.get('lyrics', [None])[0]
+    except Exception:
+        pass
+    return None
+
+
+def save_sidecar_lrc(audio_path: Path, lrc_text: str) -> None:
+    """Safe helper to write sidecar without failing playback."""
+    if not lrc_text:
+        return
+    lrc_path = audio_path.with_suffix('.lrc')
+    try:
+        lrc_path.write_text(lrc_text, encoding='utf-8')
+    except Exception:
+        pass
+
+
 class LyricsProvider(Protocol):
     name: str
 
@@ -354,142 +399,140 @@ class LyricsResolver:
                                 ],
                             )
                         )
-                    return NormalizedLyrics(
+                    ast = NormalizedLyrics(
                         track_id=track_id,
                         isrc=cached['isrc'],
                         provider_name=cached['provider_name'],
                         sync_level=cached['sync_level'],
                         lines=lines,
                     )
+                    ast.granularity = getattr(ast, 'granularity', cached.get('granularity', ast.sync_level))
+                    return ast
+
+        title = track.get('title') or track.get('name', '')
+        artist = track.get('artist', '')
+        isrc = track.get('isrc')
+
+        amll = next((p for p in self.providers if p.name == 'amll'), None)
+        netease = next((p for p in self.providers if p.name == 'netease'), None)
+        lrclib = next((p for p in self.providers if p.name == 'lrclib'), None)
+        musixmatch = next((p for p in self.providers if p.name == 'musixmatch'), None)
 
         limiter = self._get_limiter()
-        in_memory_lrclib_fallback: Optional[dict[str, Any]] = None
         has_network_error = False
 
-        async def evaluate_and_cache(
-            provider, raw_payload
-        ) -> Optional[NormalizedLyrics]:
-            if not raw_payload or raw_payload.get('status') == 'NOT_FOUND':
+        async def _fetch_and_eval(provider) -> Optional[NormalizedLyrics]:
+            if not provider:
                 return None
-
-            # Smart Matching check
-            cand_meta = {}
-            if provider.name == 'lrclib':
-                cand_meta = {
-                    'title': raw_payload.get('trackName', ''),
-                    'artist': raw_payload.get('artistName', ''),
-                    'duration_ms': raw_payload.get('duration', 0) * 1000
-                    if raw_payload.get('duration')
-                    else 0,
-                }
-            elif provider.name in ('netease', 'musixmatch'):
-                lrc_str = raw_payload.get('lrc', '')
-                ti_match = re.search(r'\[ti:(.*?)\]', lrc_str)
-                ar_match = re.search(r'\[ar:(.*?)\]', lrc_str)
-                length_match = re.search(r'\[length:(.*?)\]', lrc_str)
-                cand_meta['title'] = ti_match.group(1) if ti_match else ''
-                cand_meta['artist'] = ar_match.group(1) if ar_match else ''
-                if length_match:
-                    parts = length_match.group(1).split(':')
-                    if len(parts) == 2:
-                        try:
-                            cand_meta['duration_ms'] = int(
-                                (int(parts[0]) * 60 + float(parts[1])) * 1000
-                            )
-                        except Exception:
-                            cand_meta['duration_ms'] = 0
-                else:
-                    cand_meta['duration_ms'] = 0
-
-            if not (cand_meta.get('title') or cand_meta.get('artist')):
-                logger.debug(
-                    f'{provider.name}: no [ti:]/[ar:] tags found, rejecting unverifiable candidate'
-                )
-                return None
-
-            if not is_metadata_match(track, cand_meta):
-                logger.debug(
-                    f'{provider.name} rejected by Smart Matching: Track({track.get("title") or track.get("name")}) vs Cand({cand_meta.get("title")})'
-                )
-                return None
-
-            result = provider.normalize(raw_payload, track)
-            if result and result.has_any():
-                if track_id:
-                    # serialize for cache
-                    payload = {
-                        'status': 'OK',
-                        'isrc': result.isrc,
-                        'provider_name': result.provider_name,
-                        'sync_level': result.sync_level,
-                        'lines': result.lines,
-                    }
-                    await cache_lyrics(track_id, payload)
-                return result
-            return None
-
-        # ── BƯỚC 1: Opportunistic LRCLIB ──
-        lrclib_provider = next(
-            (p for p in self.providers if p.name == 'lrclib'), None
-        )
-        if lrclib_provider:
-            try:
-                async with limiter:
-                    raw_lrc = await asyncio.wait_for(
-                        lrclib_provider.fetch(track), timeout=self.timeout_s
-                    )
-                if raw_lrc and raw_lrc.get('status') != 'NOT_FOUND':
-                    in_memory_lrclib_fallback = raw_lrc
-                    if not track.get('isrc') and raw_lrc.get('isrc'):
-                        track['isrc'] = raw_lrc['isrc']
-            except Exception as e:
-                logger.debug(f'Opportunistic LRCLIB probe error: {e}')
-                has_network_error = True
-
-        # ── BƯỚC 2: Quét các Provider giàu Kinetic (AMLL -> NetEase) ──
-        kinetic_providers = [
-            p for p in self.providers if p.name not in {'lrclib', 'musixmatch'}
-        ]
-        for provider in kinetic_providers:
+            nonlocal has_network_error
             try:
                 async with limiter:
                     raw_payload = await asyncio.wait_for(
                         provider.fetch(track), timeout=self.timeout_s
                     )
-                result = await evaluate_and_cache(provider, raw_payload)
-                if result:
+                cand_meta = {'title': '', 'artist': '', 'duration_ms': 0}
+                if provider.name == 'amll':
+                    cand_meta = {
+                        'title': title,
+                        'artist': artist,
+                        'duration_ms': track.get('duration_ms', 0),
+                    }
+                elif provider.name == 'lrclib':
+                    cand_meta = {
+                        'title': raw_payload.get('trackName', ''),
+                        'artist': raw_payload.get('artistName', ''),
+                        'duration_ms': raw_payload.get('duration', 0) * 1000
+                        if raw_payload.get('duration')
+                        else 0,
+                    }
+                elif provider.name in ('netease', 'musixmatch'):
+                    lrc_str = raw_payload.get('lrc', '')
+                    ti_match = re.search(r'\[ti:(.*?)\]', lrc_str)
+                    ar_match = re.search(r'\[ar:(.*?)\]', lrc_str)
+                    cand_meta['title'] = ti_match.group(1) if ti_match else ''
+                    cand_meta['artist'] = ar_match.group(1) if ar_match else ''
+
+                if not is_metadata_match(track, cand_meta):
+                    return None
+
+                result = provider.normalize(raw_payload, track)
+                if result and result.has_any():
+                    if track_id:
+                        payload = {
+                            'status': 'OK',
+                            'isrc': result.isrc,
+                            'provider_name': result.provider_name,
+                            'sync_level': result.sync_level,
+                            'granularity': getattr(result, 'granularity', result.sync_level),
+                            'lines': [l.__dict__ for l in result.lines],
+                        }
+                        for line in payload['lines']:
+                            line['lead'] = [t.__dict__ for t in line['lead']]
+                        await cache_lyrics(track_id, payload)
                     return result
+                return None
             except Exception as e:
                 logger.debug(f'Provider {provider.name} error: {e}')
                 has_network_error = True
-                continue
+                return None
 
-        # ── BƯỚC 3: Kích hoạt bí kíp LRCLIB ──
-        if in_memory_lrclib_fallback and lrclib_provider:
-            result = await evaluate_and_cache(
-                lrclib_provider, in_memory_lrclib_fallback
-            )
-            if result:
-                return result
+        # TẦNG 1: AMLL TTML (Syllable)
+        if isrc and amll:
+            ast = await _fetch_and_eval(amll)
+            if ast:
+                ast.granularity = 'syllable'
+                if track_id:
+                    payload = {
+                        'status': 'OK', 'isrc': ast.isrc, 'provider_name': ast.provider_name,
+                        'sync_level': ast.sync_level, 'granularity': 'syllable',
+                        'lines': [l.__dict__ for l in ast.lines]
+                    }
+                    for line in payload['lines']: line['lead'] = [t.__dict__ for t in line['lead']]
+                    await cache_lyrics(track_id, payload)
+                return ast
 
-        # ── BƯỚC 4: Chốt chặn cuối cùng (Musixmatch) ──
-        mm_provider = next(
-            (p for p in self.providers if p.name == 'musixmatch'), None
-        )
-        if mm_provider:
-            try:
-                async with limiter:
-                    raw_mm = await asyncio.wait_for(
-                        mm_provider.fetch(track), timeout=self.timeout_s
-                    )
-                result = await evaluate_and_cache(mm_provider, raw_mm)
-                if result:
-                    return result
-            except Exception as e:
-                logger.debug(f'Musixmatch error: {e}')
-                has_network_error = True
+        # TẦNG 2: NetEase YRC (Word)
+        ast = await _fetch_and_eval(netease)
+        if ast:
+            ast.granularity = 'word'
+            if track_id:
+                payload = {
+                    'status': 'OK', 'isrc': ast.isrc, 'provider_name': ast.provider_name,
+                    'sync_level': ast.sync_level, 'granularity': 'word',
+                    'lines': [l.__dict__ for l in ast.lines]
+                }
+                for line in payload['lines']: line['lead'] = [t.__dict__ for t in line['lead']]
+                await cache_lyrics(track_id, payload)
+            return ast
 
-        # No provider succeeded. Cache NOT_FOUND only if no network errors occurred.
+        # TẦNG 3: LRCLIB (Line)
+        ast = await _fetch_and_eval(lrclib)
+        if ast:
+            ast.granularity = 'line'
+            if track_id:
+                payload = {
+                    'status': 'OK', 'isrc': ast.isrc, 'provider_name': ast.provider_name,
+                    'sync_level': ast.sync_level, 'granularity': 'line',
+                    'lines': [l.__dict__ for l in ast.lines]
+                }
+                for line in payload['lines']: line['lead'] = [t.__dict__ for t in line['lead']]
+                await cache_lyrics(track_id, payload)
+            return ast
+
+        # TẦNG 4: Musixmatch (Last Resort)
+        ast = await _fetch_and_eval(musixmatch)
+        if ast:
+            ast.granularity = 'line'
+            if track_id:
+                payload = {
+                    'status': 'OK', 'isrc': ast.isrc, 'provider_name': ast.provider_name,
+                    'sync_level': ast.sync_level, 'granularity': 'line',
+                    'lines': [l.__dict__ for l in ast.lines]
+                }
+                for line in payload['lines']: line['lead'] = [t.__dict__ for t in line['lead']]
+                await cache_lyrics(track_id, payload)
+            return ast
+
         if not has_network_error and track_id:
             await cache_lyrics(track_id, {'status': 'NOT_FOUND'})
 
@@ -644,14 +687,14 @@ class LrcLibProvider(LyricsProvider):
 
         try:
             async with httpx.AsyncClient() as client:
-                resp = await client.get(url_get, params=params, timeout=3.0)
+                resp = await client.get(url_get, params=params, timeout=10.0)
                 if resp.status_code == 200:
                     return resp.json()
 
                 # Fallback to search
                 url_search = 'https://lrclib.net/api/search'
                 resp = await client.get(
-                    url_search, params={'q': f'{title} {artist}'}, timeout=3.0
+                    url_search, params={'q': f'{title} {artist}'}, timeout=10.0
                 )
                 if resp.status_code == 200:
                     data = resp.json()

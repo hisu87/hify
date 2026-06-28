@@ -426,17 +426,15 @@ async function doFetch(key) {
 
   try {
     let ast
-    if (t.id) {
-      ast = await api.getTrackLyrics(t.id)
-    } else {
-      if (!t.title || !t.artist) throw new Error('No track information')
-      ast = await api.searchTrackLyrics(
-        t.title,
-        t.artist,
-        t.album || '',
-        t.duration_ms || 0
-      )
-    }
+    ast = await api.searchTrackLyrics(
+      t.title || '',
+      t.artist || '',
+      t.album || '',
+      t.duration_ms || 0,
+      t.file || '',
+      t.id || ''
+    )
+
     if (!ast || !ast.lines) {
       throw new Error('No lyrics available')
     }
