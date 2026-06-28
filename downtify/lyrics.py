@@ -1,129 +1,223 @@
-"""Lyrics providers used to enrich downloaded audio files.
+"""Lyrics resolution and normalization via a Multi-Provider Chain.
 
-Currently only ``lrclib`` (https://lrclib.net) is implemented. The legacy
-``genius``/``musixmatch``/``azlyrics`` identifiers from the spotdl-era UI
-are accepted as no-ops so existing settings keep round-tripping cleanly.
+This module implements the NormalizedLyrics AST to support multiple synced lyrics
+providers (TTML, YRC, LRC, etc.) and standardizes them for the Frontend and ID3 tags.
 """
 
 from __future__ import annotations
 
+import asyncio
+import os
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Optional, Protocol
 
-import requests
 from loguru import logger
 
-LRCLIB_BASE = 'https://lrclib.net/api'
-_USER_AGENT = 'Downtify (https://github.com/henriquesebastiao/downtify)'
-
-SUPPORTED_PROVIDERS = {'lrclib'}
+# [Paradox 3 Fix] Graceful fallback for local dev vs Docker
+if os.path.exists('/data'):
+    CACHE_DB_PATH = '/data/lyrics_cache.db'
+else:
+    CACHE_DB_PATH = './.cache/lyrics_cache.db'
 
 
 @dataclass
-class Lyrics:
-    plain: Optional[str] = None
-    synced: Optional[str] = None
+class NormalizedToken:
+    text: str
+    start_time: float  # Absolute seconds
+    end_time: float
+    is_trailing_space: bool
+
+
+@dataclass
+class NormalizedLine:
+    start_time: float
+    end_time: float
+    raw_text: str
+    is_instrumental: bool
+    agent_id: str
+    lead: list[NormalizedToken]
+    background: Optional[list[NormalizedToken]] = None
+
+
+@dataclass
+class NormalizedLyrics:
+    track_id: str
+    isrc: Optional[str]
+    provider_name: str
+    sync_level: str  # 'syllable', 'word', 'line', 'plain'
+    lines: list[NormalizedLine]
+
+    def to_sidecar_lrc(self) -> str:
+        """Render to enhanced/kinetic LRC format for external players."""
+        out = []
+        for line in self.lines:
+            if line.is_instrumental:
+                continue
+            mins = int(line.start_time // 60)
+            secs = line.start_time % 60
+            prefix = f'[{mins:02d}:{secs:05.2f}]'
+
+            if self.sync_level in {'word', 'syllable'} and line.lead:
+                line_str = ''
+                for token in line.lead:
+                    t_mins = int(token.start_time // 60)
+                    t_secs = token.start_time % 60
+                    line_str += f'<{t_mins:02d}:{t_secs:05.2f}>{token.text}'
+                    if token.is_trailing_space:
+                        line_str += ' '
+                out.append(f'{prefix}{line_str}')
+            else:
+                out.append(f'{prefix}{line.raw_text}')
+        return '\n'.join(out)
+
+    def to_audio_tag_text(self) -> str:
+        """Render to standard line-level or plain text for ID3 USLT tags.
+        Strips all word-level `<mm:ss.xx>` timestamps to comply with ID3 standard.
+        """
+        if self.sync_level == 'plain':
+            return '\n'.join(
+                line.raw_text
+                for line in self.lines
+                if not line.is_instrumental
+            )
+
+        out = []
+        for line in self.lines:
+            if line.is_instrumental:
+                continue
+            mins = int(line.start_time // 60)
+            secs = line.start_time % 60
+            prefix = f'[{mins:02d}:{secs:05.2f}]'
+            out.append(f'{prefix}{line.raw_text}')
+        return '\n'.join(out)
+
+    # Backwards compatibility shim for existing ID3 embedding code
+    @property
+    def synced(self) -> Optional[str]:
+        if self.sync_level == 'plain':
+            return None
+        return self.to_sidecar_lrc()
+
+    @property
+    def plain(self) -> Optional[str]:
+        if self.sync_level == 'plain':
+            return self.to_audio_tag_text()
+        return None
 
     def has_any(self) -> bool:
-        return bool(self.plain) or bool(self.synced)
+        return len(self.lines) > 0
 
 
-def fetch(song: dict[str, Any], providers: list[str]) -> Optional[Lyrics]:
-    """Try each provider in order; return the first successful match."""
+class LyricsProvider(Protocol):
+    name: str
 
-    for name in providers:
-        if name not in SUPPORTED_PROVIDERS:
-            continue
-        try:
-            result = _PROVIDER_FNS[name](song)
-        except Exception:
-            logger.exception('Lyrics provider {!r} failed', name)
-            continue
-        if result and result.has_any():
-            return result
-    return None
+    async def fetch(self, track: dict[str, Any]) -> Optional[dict[str, Any]]:
+        """Fetch raw payload specifically for this provider."""
+        ...
+
+    def normalize(
+        self, raw_payload: dict[str, Any], track: dict[str, Any]
+    ) -> Optional[NormalizedLyrics]:
+        """Convert raw payload to NormalizedLyrics AST."""
+        ...
 
 
-def _fallback_search_lrclib(
-    title: str, artist: str
-) -> Optional[dict[str, Any]]:
-    search_params = {
-        'track_name': title,
-        'artist_name': artist,
-    }
-    try:
-        response = requests.get(
-            f'{LRCLIB_BASE}/search',
-            params=search_params,
-            headers={'User-Agent': _USER_AGENT},
-            timeout=10,
+class LyricsResolver:
+    def __init__(
+        self, providers: list[LyricsProvider], timeout_s: float = 3.5
+    ):
+        self.providers = providers
+        self.timeout_s = timeout_s
+        self._loop_limiters: dict[int, asyncio.Semaphore] = {}
+
+    def _get_limiter(self) -> asyncio.Semaphore:
+        """Lazy-binding: Khởi tạo Semaphore gắn chặt vào Event Loop đang chạy"""
+        loop_id = id(asyncio.get_running_loop())
+        if loop_id not in self._loop_limiters:
+            self._loop_limiters[loop_id] = asyncio.Semaphore(5)
+        return self._loop_limiters[loop_id]
+
+    async def resolve(
+        self, track: dict[str, Any]
+    ) -> Optional[NormalizedLyrics]:
+        limiter = self._get_limiter()
+        in_memory_lrclib_fallback: Optional[dict[str, Any]] = None
+
+        # ── BƯỚC 1: Opportunistic LRCLIB (Tìm ISRC + Nhặt bí kíp dự phòng) ──
+        lrclib_provider = next(
+            (p for p in self.providers if p.name == 'lrclib'), None
         )
-        if response.status_code != 200:
-            return None
-        results = response.json()
-        if not results or not isinstance(results, list):
-            return None
+        if lrclib_provider:
+            try:
+                async with limiter:
+                    raw_lrc = await asyncio.wait_for(
+                        lrclib_provider.fetch(track), timeout=self.timeout_s
+                    )
+                if raw_lrc:
+                    in_memory_lrclib_fallback = raw_lrc
+                    # Bổ sung ISRC vào metadata nếu Spotify ban nãy chưa có
+                    if not track.get('isrc') and raw_lrc.get('isrc'):
+                        track['isrc'] = raw_lrc['isrc']
+                        logger.debug(
+                            f'Opportunistic ISRC enriched: {track["isrc"]}'
+                        )
+            except Exception as e:
+                logger.debug(f'Opportunistic LRCLIB probe skipped: {e}')
 
-        for result in results:
-            if result.get('syncedLyrics'):
-                return result
-        return results[0]
-    except (requests.RequestException, ValueError):
-        logger.opt(exception=True).warning('lrclib search fallback failed')
-        return None
+        # ── BƯỚC 2: Quét các Provider giàu Kinetic (AMLL -> NetEase) ──
+        kinetic_providers = [
+            p for p in self.providers if p.name not in {'lrclib', 'musixmatch'}
+        ]
+        for provider in kinetic_providers:
+            try:
+                async with limiter:
+                    raw_payload = await asyncio.wait_for(
+                        provider.fetch(track), timeout=self.timeout_s
+                    )
+                if raw_payload:
+                    return provider.normalize(raw_payload, track)
+            except Exception as e:
+                logger.debug(f'Provider {provider.name} missed: {e}')
+                continue
 
+        # ── BƯỚC 3: Kích hoạt bí kíp LRCLIB đã nhặt ở Bước 1 (Zero HTTP Call) ──
+        if in_memory_lrclib_fallback and lrclib_provider:
+            logger.debug('Activating in-memory LRCLIB fallback cache...')
+            return lrclib_provider.normalize(in_memory_lrclib_fallback, track)
 
-def _fetch_lrclib(song: dict[str, Any]) -> Optional[Lyrics]:
-    artists = song.get('artists') or []
-    title = (song.get('name') or '').strip()
-    if not title or not artists:
-        return None
-
-    params = {
-        'track_name': title,
-        'artist_name': artists[0],
-    }
-    album = (song.get('album_name') or '').strip()
-    if album:
-        params['album_name'] = album
-    duration = song.get('duration') or 0
-    if duration:
-        params['duration'] = int(duration)
-
-    try:
-        response = requests.get(
-            f'{LRCLIB_BASE}/get',
-            params=params,
-            headers={'User-Agent': _USER_AGENT},
-            timeout=10,
+        # ── BƯỚC 4: Chốt chặn cuối cùng (Musixmatch Anonymous Token) ──
+        mm_provider = next(
+            (p for p in self.providers if p.name == 'musixmatch'), None
         )
-    except requests.RequestException:
-        logger.opt(exception=True).warning('lrclib request failed')
+        if mm_provider:
+            try:
+                async with limiter:
+                    raw_mm = await asyncio.wait_for(
+                        mm_provider.fetch(track), timeout=self.timeout_s
+                    )
+                if raw_mm:
+                    return mm_provider.normalize(raw_mm, track)
+            except Exception as e:
+                logger.debug(f'Musixmatch missed: {e}')
+
         return None
 
-    data = None
-    if response.status_code == 200:
-        try:
-            data = response.json()
-        except ValueError:
-            pass
 
-    # Fallback to search if the exact match fails
-    if not data or response.status_code == 404:
-        fallback_data = _fallback_search_lrclib(title, artists[0])
-        if fallback_data:
-            data = fallback_data
-
-    if not data:
-        return None
-
-    plain = (data.get('plainLyrics') or '').strip() or None
-    synced = (data.get('syncedLyrics') or '').strip() or None
-    if not plain and not synced:
-        return None
-    return Lyrics(plain=plain, synced=synced)
+def resolve_sync(
+    track: dict[str, Any], providers: list[str]
+) -> Optional[NormalizedLyrics]:
+    """Helper for downloader.py executor threads to safely run the async resolver."""
+    loop = asyncio.new_event_loop()
+    try:
+        # TODO: Instantiate actual providers in Phase 2
+        resolver = LyricsResolver(providers=[])
+        return loop.run_until_complete(resolver.resolve(track))
+    finally:
+        loop.close()
 
 
-_PROVIDER_FNS = {
-    'lrclib': _fetch_lrclib,
-}
+# Compatibility shim so downloader.py doesn't crash during incremental refactoring
+def fetch(
+    song: dict[str, Any], providers: list[str]
+) -> Optional[NormalizedLyrics]:
+    return resolve_sync(song, providers)
