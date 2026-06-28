@@ -10,6 +10,7 @@
         class="flex flex-col items-center justify-center w-full h-full min-h-[44px] min-w-[44px] text-base-content/60 transition-colors"
         :class="{ 'text-[#FA233B]': isActive(item.name) }"
         :title="item.label"
+        :aria-label="item.label"
       >
         <Icon
           :icon="isActive(item.name) ? item.activeIcon : item.icon"

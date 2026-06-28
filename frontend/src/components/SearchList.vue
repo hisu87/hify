@@ -116,6 +116,7 @@
             target="_blank"
             rel="noopener"
             :title="t('search.openOnSpotify')"
+            :aria-label="t('search.openOnSpotify')"
           >
             <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
           </a>
@@ -124,6 +125,7 @@
             v-if="downloadState(song) === 'queued'"
             class="icon-btn text-primary cursor-default"
             :title="t('search.inQueue')"
+            :aria-label="t('search.inQueue')"
             disabled
           >
             <Icon icon="clarity:check-circle-line" class="h-5 w-5" />
@@ -133,6 +135,7 @@
             class="icon-btn text-primary hover:bg-primary/10"
             @click="download(song)"
             :title="t('search.download')"
+            :aria-label="t('search.download')"
           >
             <Icon icon="clarity:download-line" class="h-5 w-5" />
           </button>
@@ -150,6 +153,7 @@
         :disabled="currentPage === 1"
         @click="currentPage--"
         :title="t('search.previousPage')"
+        :aria-label="t('search.previousPage')"
       >
         <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
       </button>
@@ -171,6 +175,7 @@
         :disabled="currentPage === totalPages"
         @click="currentPage++"
         :title="t('search.nextPage')"
+        :aria-label="t('search.nextPage')"
       >
         <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
       </button>

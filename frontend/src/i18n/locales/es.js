@@ -33,6 +33,7 @@ export default {
     playlists: 'Listas',
   },
   search: {
+    submit: 'Buscar',
     placeholder: 'Busca o pega un enlace de Spotify o YouTube Music…',
     title: 'Resultados de búsqueda',
     matchesFor: 'Mostrando coincidencias para',

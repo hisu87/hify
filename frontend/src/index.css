@@ -118,7 +118,7 @@
     transition-property: transform, background-color, color, box-shadow;
     transition-duration: 300ms;
     transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-full text-base-content/80 hover:bg-white/10 hover:text-base-content active:scale-95;
+    @apply inline-flex h-11 w-11 items-center justify-center rounded-full text-base-content/80 hover:bg-white/10 hover:text-base-content active:scale-95;
   }
 
   [data-theme='downtify-light'] .icon-btn {
