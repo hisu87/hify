@@ -449,8 +449,8 @@ class LyricsResolver:
                     lrc_str = raw_payload.get('lrc', '')
                     ti_match = re.search(r'\[ti:(.*?)\]', lrc_str)
                     ar_match = re.search(r'\[ar:(.*?)\]', lrc_str)
-                    cand_meta['title'] = ti_match.group(1) if ti_match else ''
-                    cand_meta['artist'] = ar_match.group(1) if ar_match else ''
+                    cand_meta['title'] = ti_match.group(1) if ti_match else title
+                    cand_meta['artist'] = ar_match.group(1) if ar_match else artist
 
                 if not is_metadata_match(track, cand_meta):
                     return None
