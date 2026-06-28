@@ -18,9 +18,9 @@ import os
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
@@ -239,6 +239,22 @@ def build_app() -> FastAPI:
             api.state.settings.get('organize_by_artist', False)
         ),
     )
+
+    @app.exception_handler(Exception)
+    async def global_shield_exception_handler(request: Request, exc: Exception):
+        """
+        Lớp khiên tối thượng: Bất cứ lỗi 500 nào không được catch tường minh
+        sẽ bị màng lọc này chặn lại, cấm tuyệt đối việc rò rỉ Stack Trace.
+        """
+        logger.error(
+            f"🚨 Unhandled Exception at {request.method} {request.url.path}",
+            exc_info=exc
+        )
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "An internal server error occurred."}
+        )
+
     app.include_router(api.router)
 
     @app.on_event('startup')
