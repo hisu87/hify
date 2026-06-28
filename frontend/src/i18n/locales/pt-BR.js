@@ -33,6 +33,7 @@ export default {
     playlists: 'Playlists',
   },
   search: {
+    submit: 'Buscar',
     placeholder:
       'Busque uma música ou cole um link do Spotify ou YouTube Music…',
     title: 'Resultados da busca',

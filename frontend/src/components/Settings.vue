@@ -20,6 +20,7 @@
           for="settings-modal"
           class="icon-btn cursor-pointer"
           :title="t('common.close')"
+          :aria-label="t('common.close')"
         >
           <Icon icon="clarity:close-line" class="h-5 w-5" />
         </label>
@@ -60,7 +61,7 @@
               v-for="provider in sm.settingsOptions.audio_providers"
               :key="provider"
               type="button"
-              class="rounded-xl border px-3 py-2 text-sm transition-colors text-left"
+              class="rounded-xl border px-3 py-2 min-h-[44px] text-sm transition-colors text-left"
               :class="[
                 sm.settings.value.audio_providers[0] === provider
                   ? 'border-primary/50 bg-primary/10 text-primary'
@@ -229,7 +230,7 @@
               v-for="n in sm.settingsOptions.max_parallel_downloads"
               :key="n"
               type="button"
-              class="rounded-xl border px-2 py-2 text-sm font-medium transition-colors text-center"
+              class="rounded-xl border px-2 py-2 min-h-[44px] text-sm font-medium transition-colors text-center"
               :class="[
                 sm.settings.value.max_parallel_downloads === n
                   ? 'border-primary/50 bg-primary/10 text-primary'

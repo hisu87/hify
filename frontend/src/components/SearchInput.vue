@@ -3,6 +3,7 @@
     <input
       type="text"
       :placeholder="placeHolder"
+      :aria-label="placeHolder"
       :class="['input-modern', compact ? 'h-11 text-sm' : 'h-14 text-base']"
       v-model="sm.searchTerm.value"
       @keyup.enter="lookUp(sm.searchTerm.value)"
@@ -12,12 +13,15 @@
       :class="compact ? 'h-9 w-9' : 'h-11 w-11'"
       :disabled="dm.loading.value"
       @click="lookUp(sm.searchTerm.value)"
+      :title="t('search.submit')"
+      :aria-label="t('search.submit')"
     >
       <img
         v-if="dm.loading.value"
         src="../assets/14886.gif"
         class="object-contain"
         :class="compact ? 'h-3 w-3' : 'h-4 w-4'"
+        alt=""
       />
       <Icon
         v-else-if="sm.isValidURL(sm.searchTerm.value)"

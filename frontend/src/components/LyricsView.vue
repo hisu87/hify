@@ -5,6 +5,8 @@
       class="lyrics-root fixed inset-0 z-[100] flex flex-col overflow-hidden"
       @touchstart="onTouchStart"
       @touchend="onTouchEnd"
+      @mouseup="cancelScrub"
+      @touchend.passive="cancelScrub"
     >
       <!-- ─── Background (blurred album art) ─── -->
       <div class="lyrics-bg" :style="bgStyle"></div>
@@ -48,39 +50,64 @@
           class="lyrics-list"
           :style="{ transform: `translate3d(0, ${scrollY}px, 0)` }"
         >
-          <!-- Spacer: đẩy dòng đầu ra giữa màn -->
-          <div :style="{ height: topPad + 'px' }"></div>
+          <!-- Top Spacer -->
+          <div :style="{ height: topPad + topSpacerHeight + 'px' }"></div>
 
           <div
-            v-for="(line, li) in parsedLyrics"
-            :key="li"
-            class="lyric-line"
-            :class="getLineClass(li)"
-            :ref="(el) => registerLineEl(li, el)"
-            @click="player.seek(line.time)"
+            v-for="item in visibleLines"
+            :key="item.index"
+            class="lyric-line flex-col"
+            :class="[getLineClass(item.index), { 'scrubbing-active': isScrubbing && scrubLineIdx === item.index, 'scrubbing-dimmed': isScrubbing && scrubLineIdx !== item.index }]"
+            :ref="(el) => registerLineEl(item.index, el)"
+            @mousedown="onLineDown(item.index)"
+            @touchstart="onLineDown(item.index)"
+            @click="onLineClick(item.index, item.line.startTime)"
           >
-            <!-- Instrument / empty line -->
-            <span v-if="!line.words.length" class="lyric-instrument">♪</span>
+            <!-- Scrub indicator -->
+            <div v-if="isScrubbing && scrubLineIdx === item.index" class="scrub-indicator">
+              <Icon icon="ph:play-fill" class="h-4 w-4 mr-2" />
+            </div>
 
-            <!-- Words -->
-            <span
-              v-for="(word, wi) in line.words"
-              :key="wi"
-              class="lyric-word"
-              :ref="(el) => registerWordEl(li, wi, el)"
-            >
-              <!-- Faded base layer -->
-              <span class="word-base">{{ word.text }}</span>
-              <!-- Wrapper for highlight layer to apply drop-shadow without clipping -->
-              <span class="word-hl-wrapper">
-                <!-- Animated highlight layer — filled by --fill-pct CSS var -->
-                <span class="word-hl">{{ word.text }}</span>
-              </span>
+            <!-- Instrument / empty line -->
+            <span v-if="item.line.isInstrumental || !item.line.lead.length" class="lyric-instrument">
+              {{ item.line.isInstrumental ? '• • •' : '♪' }}
             </span>
+
+            <!-- Lead Words -->
+            <div class="lead-words flex flex-wrap" :class="getAlignClass(item.index)">
+              <span
+                v-for="(word, wi) in item.line.lead"
+                :key="'lead-'+wi"
+                class="lyric-word"
+                :data-has-space="word.isTrailingSpace"
+                :ref="(el) => registerWordEl(item.index, wi, el, false)"
+              >
+                <span class="word-base">{{ word.text }}</span>
+                <span class="word-hl-wrapper">
+                  <span class="word-hl">{{ word.text }}</span>
+                </span>
+              </span>
+            </div>
+
+            <!-- Background Words -->
+            <div v-if="item.line.background" class="bg-words flex flex-wrap scale-75 opacity-70 mt-1" :class="getAlignClass(item.index)">
+              <span
+                v-for="(word, wi) in item.line.background"
+                :key="'bg-'+wi"
+                class="lyric-word"
+                :data-has-space="word.isTrailingSpace"
+                :ref="(el) => registerWordEl(item.index, wi, el, true)"
+              >
+                <span class="word-base">{{ word.text }}</span>
+                <span class="word-hl-wrapper">
+                  <span class="word-hl">{{ word.text }}</span>
+                </span>
+              </span>
+            </div>
           </div>
 
           <!-- Bottom spacer -->
-          <div :style="{ height: botPad + 'px' }"></div>
+          <div :style="{ height: botPad + bottomSpacerHeight + 'px' }"></div>
         </div>
       </div>
     </div>
@@ -114,6 +141,57 @@ const topPad = ref(200)
 const botPad = ref(300)
 const activeLineIdx = ref(-1)
 
+// Virtualization
+const estimatedLineHeight = 80
+const measuredHeights = new Map()
+const visibleStartIndex = computed(() => Math.max(0, activeLineIdx.value - 4))
+const visibleEndIndex = computed(() => Math.min(parsedLyrics.value.length, activeLineIdx.value + 6))
+const visibleLines = computed(() => {
+  if (parsedLyrics.value.length === 0) return []
+  return parsedLyrics.value.slice(visibleStartIndex.value, visibleEndIndex.value).map((l, i) => ({ line: l, index: visibleStartIndex.value + i }))
+})
+
+const topSpacerHeight = computed(() => {
+  let h = 0
+  for (let i = 0; i < visibleStartIndex.value; i++) {
+    h += measuredHeights.get(i) || estimatedLineHeight
+  }
+  return h
+})
+
+const bottomSpacerHeight = computed(() => {
+  let h = 0
+  for (let i = visibleEndIndex.value; i < parsedLyrics.value.length; i++) {
+    h += measuredHeights.get(i) || estimatedLineHeight
+  }
+  return h
+})
+
+// Scrubbing
+const isScrubbing = ref(false)
+const scrubLineIdx = ref(-1)
+
+function onLineDown(li) {
+  isScrubbing.value = true
+  scrubLineIdx.value = li
+}
+
+function cancelScrub() {
+  if (isScrubbing.value) {
+    // Delay slightly to let click register
+    setTimeout(() => {
+      isScrubbing.value = false
+      scrubLineIdx.value = -1
+    }, 100)
+  }
+}
+
+function onLineClick(li, time) {
+  player.seek(time)
+  isScrubbing.value = false
+  scrubLineIdx.value = -1
+}
+
 // ─── Lyrics cache ─────────────────────────────────────────────────────────────
 const lyricsCache = new Map()
 const lyricsRequests = new Map()
@@ -129,16 +207,20 @@ const lineElMap = new Map()
 animator.onFrame = ({ activeLineIdx: ali, scrollSpringPos }) => {
   if (ali !== activeLineIdx.value) {
     activeLineIdx.value = ali
-    updateScrollGoal(ali)
+    if (!isScrubbing.value) {
+      updateScrollGoal(ali)
+    }
   }
-  scrollY.value = scrollSpringPos
+  if (!isScrubbing.value) {
+    scrollY.value = scrollSpringPos
+  }
 }
 
-function registerWordEl(li, wi, el) {
+function registerWordEl(li, wi, el, isBg) {
   if (el) {
-    animator.registerWord(li, wi, el)
+    animator.registerWord(li, wi, el, isBg)
   } else {
-    animator.unregisterWord(li, wi)
+    animator.unregisterWord(li, wi, isBg)
   }
 }
 
@@ -146,6 +228,10 @@ function registerLineEl(li, el) {
   if (el) {
     animator.registerLine(li, el)
     lineElMap.set(li, el)
+    measuredHeights.set(li, el.offsetHeight)
+    if (li === activeLineIdx.value && !isScrubbing.value) {
+      updateScrollGoal(li)
+    }
   } else {
     animator.unregisterLine(li)
     lineElMap.delete(li)
@@ -158,12 +244,18 @@ function updateScrollGoal(lineIdx) {
   nextTick(() => {
     const containerH = scrollerEl.value?.clientHeight || 600
     const el = lineElMap.get(lineIdx)
-    if (!el) return
+    if (!el) {
+      let estimatedY = topPad.value
+      for (let i = 0; i < lineIdx; i++) {
+        estimatedY += measuredHeights.get(i) || estimatedLineHeight
+      }
+      animator.setScrollGoal(-(estimatedY - containerH * 0.4))
+      return
+    }
 
     const elTop = el.offsetTop
     const elH = el.offsetHeight
     const center = elTop + elH / 2
-    // Scroll goal: đặt active line ở 40% chiều cao (cao hơn trung điểm một chút, giống Apple Music)
     const goal = -(center - containerH * 0.4)
     animator.setScrollGoal(goal)
   })
@@ -176,6 +268,13 @@ function getLineClass(li) {
   if (val < 0.33) return 'align-left'
   if (val < 0.66) return 'align-center'
   return 'align-right'
+}
+
+function getAlignClass(li) {
+  const align = getLineClass(li)
+  if (align === 'align-left') return 'justify-start origin-left'
+  if (align === 'align-center') return 'justify-center origin-center'
+  return 'justify-end origin-right'
 }
 
 // ─── Background style ─────────────────────────────────────────────────────────
@@ -238,7 +337,6 @@ function onTouchEnd(event) {
   const diffX = Math.abs(touchEndX - touchStartX)
   const diffY = touchEndY - touchStartY
 
-  // If swiped down significantly (more than 80px) and mostly vertical
   if (diffY > 80 && diffY > diffX * 1.5) {
     close()
   }
@@ -252,7 +350,6 @@ async function prefetchLyrics() {
   try {
     await getLyrics(key)
   } catch {
-    // keep prefetch silent
   }
 }
 
@@ -296,7 +393,6 @@ async function doFetch(key) {
   const t = currentTrack.value
   if (!t) throw new Error('No track selected')
 
-  // 1. Try local .lrc file first based on file path
   if (t.file) {
     try {
       const lrcFile = t.file.replace(/\.[^.]+$/, '.lrc')
@@ -313,11 +409,9 @@ async function doFetch(key) {
         }
       }
     } catch (e) {
-      // Ignore local fetch error and fallback to lrclib API
     }
   }
 
-  // 2. Fallback to API if local file doesn't exist or is empty
   const params = new URLSearchParams()
   if (t.title) params.append('track_name', t.title)
   if (t.artist) params.append('artist_name', t.artist)
@@ -334,24 +428,7 @@ async function doFetch(key) {
   if (data.syncedLyrics) {
     lines = parseLrc(data.syncedLyrics)
   } else if (data.plainLyrics) {
-    // plain: treat each line as a single word block
-    lines = data.plainLyrics
-      .split('\n')
-      .filter(Boolean)
-      .map((text, i) => ({
-        time: i * 3,
-        duration: 3,
-        text,
-        hasWordTiming: false,
-        words: text
-          .split(/\s+/)
-          .filter(Boolean)
-          .map((w, wi, arr) => ({
-            text: w,
-            delay: (wi / arr.length) * 3,
-            duration: 3 / arr.length,
-          })),
-      }))
+    lines = parseLrc(data.plainLyrics)
   } else {
     throw new Error('No lyrics available')
   }
@@ -366,39 +443,31 @@ function applyLyrics(lines) {
   error.value = ''
   animator.setLines(lines)
 
-  // Jump scroll to active line on open
   nextTick(() => {
     const now = player.currentTime.value
     let startIdx = 0
     for (let i = lines.length - 1; i >= 0; i--) {
-      if (now >= lines[i].time - 0.25) {
+      if (now >= lines[i].startTime - 0.25) {
         startIdx = i
         break
       }
     }
-    // snap scroll spring to position
     const containerH = scrollerEl.value?.clientHeight || 600
-    const el = lineElMap.get(startIdx)
-    if (el) {
-      const center = el.offsetTop + el.offsetHeight / 2
-      const snap = -(center - containerH * 0.4)
-      animator._scrollSpring.snapTo(snap)
-      scrollY.value = snap
-    }
+    let snap = -(topPad.value + (startIdx * estimatedLineHeight) - containerH * 0.4)
+    animator._scrollSpring.snapTo(snap)
+    scrollY.value = snap
     activeLineIdx.value = startIdx
   })
 }
 </script>
 
 <style scoped>
-/* ─── Root ───────────────────────────────────────────────────────────────────── */
 .lyrics-root {
   color: white;
   font-family: 'Tahoma', 'Geneva', sans-serif;
   overscroll-behavior: contain;
 }
 
-/* ─── Background ─────────────────────────────────────────────────────────────── */
 .lyrics-bg {
   position: absolute;
   inset: -10%;
@@ -417,7 +486,6 @@ function applyLyrics(lines) {
   backdrop-filter: blur(4px);
 }
 
-/* ─── Nav ────────────────────────────────────────────────────────────────────── */
 .lyrics-nav {
   position: relative;
   z-index: 10;
@@ -436,30 +504,15 @@ function applyLyrics(lines) {
   opacity: 0.45;
 }
 
-/* ─── Content area ───────────────────────────────────────────────────────────── */
 .lyrics-content {
   position: relative;
   z-index: 10;
   flex: 1;
   overflow: hidden;
-  /* Vertical mask: fade top & bottom 15% */
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 12%,
-    black 82%,
-    transparent 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black 12%,
-    black 82%,
-    transparent 100%
-  );
+  mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 82%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 82%, transparent 100%);
 }
 
-/* ─── Lyrics list ────────────────────────────────────────────────────────────── */
 .lyrics-list {
   position: absolute;
   top: 0;
@@ -467,37 +520,54 @@ function applyLyrics(lines) {
   right: 0;
   will-change: transform;
   padding: 0 clamp(1.25rem, 5vw, 4rem);
-  /* Prevent text selection while animating */
   user-select: none;
 }
 
-/* ─── Line ───────────────────────────────────────────────────────────────────── */
 .lyric-line {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
   width: 100%;
   padding: 0.4rem 0;
   margin-bottom: 2.5rem;
   line-height: 1.1;
   cursor: pointer;
-  /* GPU hint for blur and scale animations */
   will-change: filter, transform;
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
+}
+
+.scrubbing-active {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+.scrubbing-dimmed {
+  opacity: 0.15 !important;
+}
+
+.scrub-indicator {
+  position: absolute;
+  left: -2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  opacity: 0.5;
+  width: 100vw;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+  z-index: -1;
 }
 
 .align-left {
-  justify-content: flex-start;
+  align-items: flex-start;
   transform-origin: left center;
 }
 
 .align-center {
-  justify-content: center;
+  align-items: center;
   transform-origin: center center;
 }
 
 .align-right {
-  justify-content: flex-end;
+  align-items: flex-end;
   transform-origin: right center;
 }
 
@@ -505,81 +575,61 @@ function applyLyrics(lines) {
   font-size: clamp(1.8rem, 4vw, 3rem);
   opacity: 0.3;
   padding: 0.3rem 0;
+  align-self: center;
 }
 
-/* ─── Word ───────────────────────────────────────────────────────────────────── */
+.lead-words, .bg-words {
+  width: 100%;
+}
+
 .lyric-word {
-  /* Inline-grid: base and hl layers stacked exactly */
   display: inline-grid;
-  margin-right: 0.3em;
+  margin-right: 0.1em;
   margin-bottom: 0.25em;
   transform-origin: bottom center;
   cursor: pointer;
-  /* Spring will write transform — GPU composited */
   will-change: transform;
   backface-visibility: hidden;
 }
 
-/* Base (faded) layer */
+.lyric-word[data-has-space="true"] {
+  margin-right: 0.28em;
+}
+
 .word-base {
   grid-column: 1;
   grid-row: 1;
   color: white;
   font-size: clamp(1.6rem, 4.5vw, 3.75rem);
   font-weight: 900;
-  letter-spacing: 0.2rem;
-  white-space: nowrap;
-  /* opacity set by spring via AnimatorStore */
+  letter-spacing: 0.1rem;
+  white-space: pre;
   opacity: 0.28;
 }
 
-/* Wrapper for highlight layer to apply drop-shadow without clipping */
 .word-hl-wrapper {
   grid-column: 1;
   grid-row: 1;
   display: inline-grid;
   will-change: filter;
-  filter: drop-shadow(
-      0 0 var(--glow-blur, 0px) rgba(255, 255, 255, var(--glow-opacity, 0))
-    )
-    drop-shadow(
-      0 0 calc(var(--glow-blur, 0px) * 2.5)
-        rgba(255, 255, 255, calc(var(--glow-opacity, 0) * 0.5))
-    );
+  filter: drop-shadow(0 0 var(--glow-blur, 0px) rgba(255, 255, 255, var(--glow-opacity, 0)))
+          drop-shadow(0 0 calc(var(--glow-blur, 0px) * 2.5) rgba(255, 255, 255, calc(var(--glow-opacity, 0) * 0.5)));
 }
 
-/* Highlight (filled) layer */
 .word-hl {
   grid-column: 1;
   grid-row: 1;
   font-size: clamp(1.6rem, 4.5vw, 3.75rem);
   font-weight: 900;
-  letter-spacing: 0.2rem;
-  white-space: nowrap;
+  letter-spacing: 0.1rem;
+  white-space: pre;
   color: white;
-  /* Gradient fill: --fill-pct is written by spring each frame */
-  /* Feather region is BEHIND the fill point to avoid white leading-edge artifact */
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    black calc(var(--fill-pct, 0%) - 18%),
-    transparent var(--fill-pct, 0%),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    90deg,
-    black calc(var(--fill-pct, 0%) - 18%),
-    transparent var(--fill-pct, 0%),
-    transparent 100%
-  );
-  /* opacity set by spring */
+  -webkit-mask-image: linear-gradient(90deg, black calc(var(--fill-pct, 0%) - 18%), transparent var(--fill-pct, 0%), transparent 100%);
+  mask-image: linear-gradient(90deg, black calc(var(--fill-pct, 0%) - 18%), transparent var(--fill-pct, 0%), transparent 100%);
   opacity: 0.01;
-  will-change:
-    opacity,
-    mask-image,
-    -webkit-mask-image;
+  will-change: opacity, mask-image, -webkit-mask-image;
 }
 
-/* ─── State screens ──────────────────────────────────────────────────────────── */
 .lyrics-state {
   display: flex;
   flex-direction: column;
@@ -593,70 +643,28 @@ function applyLyrics(lines) {
   opacity: 0.5;
 }
 
-/* Loading dots animation */
-.lyrics-state-dots {
-  display: flex;
-  gap: 0.5rem;
-}
+.lyrics-state-dots { display: flex; gap: 0.5rem; }
 .lyrics-state-dots span {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: white;
-  opacity: 0.7;
+  width: 10px; height: 10px; border-radius: 50%; background: white; opacity: 0.7;
   animation: dot-bounce 1.4s ease-in-out infinite both;
 }
-.lyrics-state-dots span:nth-child(1) {
-  animation-delay: 0s;
-}
-.lyrics-state-dots span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.lyrics-state-dots span:nth-child(3) {
-  animation-delay: 0.4s;
-}
+.lyrics-state-dots span:nth-child(1) { animation-delay: 0s; }
+.lyrics-state-dots span:nth-child(2) { animation-delay: 0.2s; }
+.lyrics-state-dots span:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes dot-bounce {
-  0%,
-  80%,
-  100% {
-    transform: scale(0.6);
-    opacity: 0.4;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
 }
 
-/* ─── Modal transition ───────────────────────────────────────────────────────── */
 .lyrics-modal-enter-active,
-.lyrics-modal-leave-active {
-  transition:
-    opacity 0.4s ease,
-    transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-}
+.lyrics-modal-leave-active { transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
 .lyrics-modal-enter-from,
-.lyrics-modal-leave-to {
-  opacity: 0;
-  transform: translateY(24px);
-}
+.lyrics-modal-leave-to { opacity: 0; transform: translateY(24px); }
 
-/* ─── Icon button ────────────────────────────────────────────────────────────── */
 .icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  cursor: pointer;
-  color: white;
-  transition: background 0.2s;
+  display: flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem;
+  border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: none; cursor: pointer; color: white; transition: background 0.2s;
 }
-.icon-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+.icon-btn:hover { background: rgba(255, 255, 255, 0.2); }
 </style>

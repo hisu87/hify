@@ -4,16 +4,18 @@
     @touchstart="onTouchStart"
     @touchend="onTouchEnd"
   >
-    <!-- Thin progress bar for mobile -->
+    <!-- Thin progress bar for mobile with 44px tap target -->
     <div
-      class="absolute top-0 left-0 right-0 h-1 bg-black/10 dark:bg-white/10 lg:hidden"
+      class="absolute left-0 right-0 top-[-22px] min-h-[44px] lg:hidden flex items-center"
       @click="onSeekClick"
       @pointerdown="onSeekStart"
     >
-      <div
-        class="player-progress-fill h-full transition-[width] duration-150"
-        :style="`width: ${player.progressPct.value}%`"
-      />
+      <div class="w-full h-1 bg-black/10 dark:bg-white/10">
+        <div
+          class="player-progress-fill h-full transition-[width] duration-150"
+          :style="`width: ${player.progressPct.value}%`"
+        />
+      </div>
     </div>
 
     <div
@@ -60,6 +62,7 @@
           :disabled="!hasTracks"
           @click="$emit('open-lyrics')"
           title="Lyrics"
+          aria-label="Lyrics"
         >
           <Icon icon="clarity:note-line" class="h-6 w-6" />
         </button>
@@ -67,6 +70,7 @@
           class="inline-flex h-11 w-11 min-w-[44px] min-h-[44px] items-center justify-center rounded-full bg-[#FA233B] text-white shadow-[0_0_16px_rgba(250,35,59,0.25)] transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] hover:scale-105 active:scale-95 disabled:opacity-50"
           @click="player.toggle()"
           :disabled="!hasTracks"
+          :aria-label="player.isPlaying.value ? 'Pause' : 'Play'"
         >
           <Icon
             :icon="
@@ -81,6 +85,7 @@
           class="icon-btn h-11 w-11 min-w-[44px] min-h-[44px]"
           @click="player.next()"
           :disabled="!hasTracks"
+          aria-label="Next"
         >
           <Icon icon="clarity:step-forward-2-line" class="h-6 w-6" />
         </button>
@@ -96,6 +101,7 @@
             @click="player.prev()"
             :disabled="!hasTracks"
             title="Previous"
+            aria-label="Previous"
           >
             <Icon
               icon="clarity:step-forward-2-line"
@@ -108,6 +114,7 @@
             @click="player.toggle()"
             :disabled="!hasTracks"
             :title="player.isPlaying.value ? 'Pause' : 'Play'"
+            :aria-label="player.isPlaying.value ? 'Pause' : 'Play'"
           >
             <Icon
               :icon="
@@ -124,6 +131,7 @@
             @click="player.next()"
             :disabled="!hasTracks"
             title="Next"
+            aria-label="Next"
           >
             <Icon icon="clarity:step-forward-2-line" class="h-5 w-5" />
           </button>
@@ -169,6 +177,7 @@
           :class="{ 'icon-btn-active': player.shuffle.value }"
           @click="player.toggleShuffle()"
           :title="player.shuffle.value ? 'Shuffle on' : 'Shuffle off'"
+          :aria-label="player.shuffle.value ? 'Shuffle on' : 'Shuffle off'"
         >
           <Icon icon="clarity:shuffle-line" class="h-5 w-5" />
         </button>
@@ -177,6 +186,7 @@
           class="icon-btn"
           @click="router.push({ name: 'Download' })"
           title="Queue"
+          aria-label="Queue"
         >
           <Icon icon="clarity:download-line" class="h-5 w-5" />
         </button>
@@ -187,6 +197,7 @@
           :disabled="!hasTracks"
           @click="$emit('open-lyrics')"
           title="Lyrics"
+          aria-label="Lyrics"
         >
           <Icon icon="clarity:note-line" class="h-5 w-5" />
         </button>
@@ -196,6 +207,7 @@
           :class="{ 'icon-btn-active': layout.isRightSidebarOpen.value }"
           @click="layout.toggleRightSidebar()"
           title="Now Playing View"
+          aria-label="Now Playing View"
         >
           <Icon icon="clarity:play-list-line" class="h-5 w-5" />
         </button>
@@ -207,6 +219,7 @@
             class="icon-btn shrink-0"
             @click="player.toggleMute()"
             :title="player.isMuted.value ? 'Unmute' : 'Mute'"
+            :aria-label="player.isMuted.value ? 'Unmute' : 'Mute'"
           >
             <Icon :icon="volumeIcon" class="h-5 w-5" />
           </button>
@@ -219,6 +232,7 @@
             @input="onVolume($event)"
             class="player-range w-full"
             title="Volume"
+            aria-label="Volume"
           />
         </div>
       </div>
