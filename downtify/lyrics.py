@@ -13,11 +13,15 @@ from typing import Any, Optional, Protocol
 
 from loguru import logger
 
-# [Paradox 3 Fix] Graceful fallback for local dev vs Docker
 if os.path.exists('/data'):
     CACHE_DB_PATH = '/data/lyrics_cache.db'
 else:
-    CACHE_DB_PATH = './.cache/lyrics_cache.db'
+    CACHE_DB_PATH = './data/lyrics_cache.db'
+
+import re
+
+from downtify.lyrics_db import cache_lyrics, get_cached_lyrics
+from downtify.smart_matching import is_metadata_match
 
 
 @dataclass
@@ -151,8 +155,6 @@ def estimate_tokens(
 
     return enforce_time_rules(tokens)
 
-
-import re
 
 LRC_LINE_RE = re.compile(r'^\[(\d+):(\d+\.\d+|\d+)\](.*)$')
 LRC_WORD_RE = re.compile(r'<(\d+):(\d+\.\d+|\d+)>([^<]*)')
@@ -326,10 +328,102 @@ class LyricsResolver:
     async def resolve(
         self, track: dict[str, Any]
     ) -> Optional[NormalizedLyrics]:
+        track_id = track.get('id')
+        if track_id:
+            cached = await get_cached_lyrics(track_id)
+            if cached:
+                if cached.get('status') == 'NOT_FOUND':
+                    return None
+                if cached.get('status') == 'OK':
+                    lines = []
+                    for ld in cached['lines']:
+                        lines.append(
+                            NormalizedLine(
+                                start_time=ld['start_time'],
+                                end_time=ld['end_time'],
+                                raw_text=ld['text'],
+                                is_instrumental=False,
+                                agent_id=ld['agent_id'],
+                                lead=[
+                                    NormalizedToken(**t) for t in ld['lead']
+                                ],
+                                background=[
+                                    NormalizedToken(**t) for t in ld['bg']
+                                ]
+                                if ld.get('bg')
+                                else None,
+                            )
+                        )
+                    return NormalizedLyrics(
+                        track_id=track_id,
+                        isrc=cached['isrc'],
+                        provider_name=cached['provider_name'],
+                        sync_level=cached['sync_level'],
+                        lines=lines,
+                    )
+
         limiter = self._get_limiter()
         in_memory_lrclib_fallback: Optional[dict[str, Any]] = None
+        has_network_error = False
 
-        # ── BƯỚC 1: Opportunistic LRCLIB (Tìm ISRC + Nhặt bí kíp dự phòng) ──
+        async def evaluate_and_cache(
+            provider, raw_payload
+        ) -> Optional[NormalizedLyrics]:
+            if not raw_payload or raw_payload.get('status') == 'NOT_FOUND':
+                return None
+
+            # Smart Matching check
+            cand_meta = {}
+            if provider.name == 'lrclib':
+                cand_meta = {
+                    'title': raw_payload.get('trackName', ''),
+                    'artist': raw_payload.get('artistName', ''),
+                    'duration_ms': raw_payload.get('duration', 0) * 1000
+                    if raw_payload.get('duration')
+                    else 0,
+                }
+            elif provider.name in ('netease', 'musixmatch'):
+                lrc_str = raw_payload.get('lrc', '')
+                ti_match = re.search(r'\[ti:(.*?)\]', lrc_str)
+                ar_match = re.search(r'\[ar:(.*?)\]', lrc_str)
+                length_match = re.search(r'\[length:(.*?)\]', lrc_str)
+                cand_meta['title'] = ti_match.group(1) if ti_match else ''
+                cand_meta['artist'] = ar_match.group(1) if ar_match else ''
+                if length_match:
+                    parts = length_match.group(1).split(':')
+                    if len(parts) == 2:
+                        try:
+                            cand_meta['duration_ms'] = int(
+                                (int(parts[0]) * 60 + float(parts[1])) * 1000
+                            )
+                        except:
+                            cand_meta['duration_ms'] = 0
+                else:
+                    cand_meta['duration_ms'] = 0
+
+            if cand_meta.get('title') or cand_meta.get('artist'):
+                if not is_metadata_match(track, cand_meta):
+                    logger.debug(
+                        f'{provider.name} rejected by Smart Matching: Track({track.get("title")}) vs Cand({cand_meta.get("title")})'
+                    )
+                    return None
+
+            result = provider.normalize(raw_payload, track)
+            if result and result.has_any():
+                if track_id:
+                    # serialize for cache
+                    payload = {
+                        'status': 'OK',
+                        'isrc': result.isrc,
+                        'provider_name': result.provider_name,
+                        'sync_level': result.sync_level,
+                        'lines': result.lines,
+                    }
+                    await cache_lyrics(track_id, payload)
+                return result
+            return None
+
+        # ── BƯỚC 1: Opportunistic LRCLIB ──
         lrclib_provider = next(
             (p for p in self.providers if p.name == 'lrclib'), None
         )
@@ -339,16 +433,13 @@ class LyricsResolver:
                     raw_lrc = await asyncio.wait_for(
                         lrclib_provider.fetch(track), timeout=self.timeout_s
                     )
-                if raw_lrc:
+                if raw_lrc and raw_lrc.get('status') != 'NOT_FOUND':
                     in_memory_lrclib_fallback = raw_lrc
-                    # Bổ sung ISRC vào metadata nếu Spotify ban nãy chưa có
                     if not track.get('isrc') and raw_lrc.get('isrc'):
                         track['isrc'] = raw_lrc['isrc']
-                        logger.debug(
-                            f'Opportunistic ISRC enriched: {track["isrc"]}'
-                        )
             except Exception as e:
-                logger.debug(f'Opportunistic LRCLIB probe skipped: {e}')
+                logger.debug(f'Opportunistic LRCLIB probe error: {e}')
+                has_network_error = True
 
         # ── BƯỚC 2: Quét các Provider giàu Kinetic (AMLL -> NetEase) ──
         kinetic_providers = [
@@ -360,18 +451,23 @@ class LyricsResolver:
                     raw_payload = await asyncio.wait_for(
                         provider.fetch(track), timeout=self.timeout_s
                     )
-                if raw_payload:
-                    return provider.normalize(raw_payload, track)
+                result = await evaluate_and_cache(provider, raw_payload)
+                if result:
+                    return result
             except Exception as e:
-                logger.debug(f'Provider {provider.name} missed: {e}')
+                logger.debug(f'Provider {provider.name} error: {e}')
+                has_network_error = True
                 continue
 
-        # ── BƯỚC 3: Kích hoạt bí kíp LRCLIB đã nhặt ở Bước 1 (Zero HTTP Call) ──
+        # ── BƯỚC 3: Kích hoạt bí kíp LRCLIB ──
         if in_memory_lrclib_fallback and lrclib_provider:
-            logger.debug('Activating in-memory LRCLIB fallback cache...')
-            return lrclib_provider.normalize(in_memory_lrclib_fallback, track)
+            result = await evaluate_and_cache(
+                lrclib_provider, in_memory_lrclib_fallback
+            )
+            if result:
+                return result
 
-        # ── BƯỚC 4: Chốt chặn cuối cùng (Musixmatch Anonymous Token) ──
+        # ── BƯỚC 4: Chốt chặn cuối cùng (Musixmatch) ──
         mm_provider = next(
             (p for p in self.providers if p.name == 'musixmatch'), None
         )
@@ -381,10 +477,16 @@ class LyricsResolver:
                     raw_mm = await asyncio.wait_for(
                         mm_provider.fetch(track), timeout=self.timeout_s
                     )
-                if raw_mm:
-                    return mm_provider.normalize(raw_mm, track)
+                result = await evaluate_and_cache(mm_provider, raw_mm)
+                if result:
+                    return result
             except Exception as e:
-                logger.debug(f'Musixmatch missed: {e}')
+                logger.debug(f'Musixmatch error: {e}')
+                has_network_error = True
+
+        # No provider succeeded. Cache NOT_FOUND only if no network errors occurred.
+        if not has_network_error and track_id:
+            await cache_lyrics(track_id, {'status': 'NOT_FOUND'})
 
         return None
 
@@ -404,8 +506,11 @@ class AmllTtmlProvider(LyricsProvider):
                 resp = await client.get(url, timeout=3.0)
                 if resp.status_code == 200:
                     return {'xml': resp.text}
+                elif resp.status_code == 404:
+                    return {'status': 'NOT_FOUND'}
         except Exception as e:
             logger.debug(f'AMLL fetch failed: {e}')
+            raise
         return None
 
     def normalize(
@@ -444,8 +549,10 @@ class NetEaseYrcProvider(LyricsProvider):
             )
             if lrc_str:
                 return {'lrc': lrc_str}
+            return {'status': 'NOT_FOUND'}
         except Exception as e:
             logger.debug(f'NetEase fetch failed: {e}')
+            raise
         return None
 
     def normalize(
@@ -480,8 +587,10 @@ class MusixmatchTokenProvider(LyricsProvider):
             )
             if lrc_str:
                 return {'lrc': lrc_str}
+            return {'status': 'NOT_FOUND'}
         except Exception as e:
             logger.debug(f'Musixmatch fetch failed: {e}')
+            raise
         return None
 
     def normalize(
@@ -534,8 +643,10 @@ class LrcLibProvider(LyricsProvider):
                     data = resp.json()
                     if isinstance(data, list) and len(data) > 0:
                         return data[0]
+                return {'status': 'NOT_FOUND'}
         except Exception as e:
             logger.debug(f'LRCLIB fetch failed: {e}')
+            raise
         return None
 
     def normalize(
