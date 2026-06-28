@@ -454,15 +454,36 @@ function applyLyrics(lines) {
     error.value = 'Invalid lyrics format'
     return
   }
-  parsedLyrics.value = lines
+
+  // Map snake_case from backend API to camelCase for frontend Animator
+  const mappedLines = lines.map((line) => ({
+    startTime: line.start_time ?? line.startTime,
+    endTime: line.end_time ?? line.endTime,
+    rawText: line.raw_text ?? line.rawText,
+    isInstrumental: line.is_instrumental ?? line.isInstrumental,
+    lead: (line.lead || []).map((t) => ({
+      text: t.text,
+      startTime: t.start_time ?? t.startTime,
+      endTime: t.end_time ?? t.endTime,
+      isTrailingSpace: t.is_trailing_space ?? t.isTrailingSpace,
+    })),
+    background: (line.background || []).map((t) => ({
+      text: t.text,
+      startTime: t.start_time ?? t.startTime,
+      endTime: t.end_time ?? t.endTime,
+      isTrailingSpace: t.is_trailing_space ?? t.isTrailingSpace,
+    })),
+  }))
+
+  parsedLyrics.value = mappedLines
   error.value = ''
-  animator.setLines(lines)
+  animator.setLines(mappedLines)
 
   nextTick(() => {
     const now = player.currentTime.value
     let startIdx = 0
-    for (let i = lines.length - 1; i >= 0; i--) {
-      if (now >= lines[i].startTime - 0.25) {
+    for (let i = mappedLines.length - 1; i >= 0; i--) {
+      if (now >= mappedLines[i].startTime - 0.25) {
         startIdx = i
         break
       }
@@ -617,7 +638,7 @@ function applyLyrics(lines) {
 }
 
 .lyric-word {
-  display: inline-block;
+  display: inline-grid;
   will-change: transform, opacity;
   transform: translate3d(0, 0, 0) scale(var(--word-scale, 1));
   margin-right: 0.1em;
