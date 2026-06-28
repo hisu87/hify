@@ -57,7 +57,7 @@
             v-for="item in visibleLines"
             :key="item.index"
             class="lyric-line flex-col"
-            :class="[getLineClass(item.index), { 'scrubbing-active': isScrubbing && scrubLineIdx === item.index, 'scrubbing-dimmed': isScrubbing && scrubLineIdx !== item.index }]"
+            :class="[getLineClass(item.index), `agent-${item.line.agent_id || 'default'}`, { 'scrubbing-active': isScrubbing && scrubLineIdx === item.index, 'scrubbing-dimmed': isScrubbing && scrubLineIdx !== item.index }]"
             :ref="(el) => registerLineEl(item.index, el)"
             @mousedown="onLineDown(item.index)"
             @touchstart="onLineDown(item.index)"
@@ -118,7 +118,7 @@
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { usePlayer } from '../model/player'
-import { parseLrc } from '../utils/lyrics/LrcParser.js'
+import api from '../model/api'
 import { LyricsAnimator } from '../utils/lyrics/LyricsAnimator.js'
 
 // ─── Props / Emits ────────────────────────────────────────────────────────────
@@ -198,7 +198,7 @@ const lyricsRequests = new Map()
 
 // ─── Animator ─────────────────────────────────────────────────────────────────
 const animator = new LyricsAnimator()
-animator.getTime = () => player.currentTime.value
+animator.audioElement = player.getAudio()
 animator.isPlaying = () => player.isPlaying.value
 
 // Line element refs
@@ -353,9 +353,15 @@ async function prefetchLyrics() {
   }
 }
 
+let _lastFetchId = null
+
 async function fetchLyrics() {
   if (!currentTrack.value) return
   const key = cacheKey()
+  
+  const reqId = Symbol()
+  _lastFetchId = reqId
+
   if (lyricsCache.has(key)) {
     applyLyrics(lyricsCache.get(key))
     return
@@ -363,10 +369,12 @@ async function fetchLyrics() {
   loading.value = true
   error.value = ''
   try {
-    const lines = await getLyrics(key)
-    if (cacheKey() === key) applyLyrics(lines)
+    const ast = await getLyrics(key)
+    if (_lastFetchId !== reqId) return
+    applyLyrics(ast.lines)
+    loading.value = false
   } catch (err) {
-    if (cacheKey() === key) {
+    if (_lastFetchId === reqId) {
       error.value = err.message || 'Error loading lyrics'
       loading.value = false
     }
@@ -391,50 +399,21 @@ async function getLyrics(key) {
 
 async function doFetch(key) {
   const t = currentTrack.value
-  if (!t) throw new Error('No track selected')
+  if (!t || !t.id) throw new Error('No track selected')
 
-  if (t.file) {
-    try {
-      const lrcFile = t.file.replace(/\.[^.]+$/, '.lrc')
-      const encodedUrl = lrcFile.split('/').map(encodeURIComponent).join('/')
-      const localRes = await fetch(`/downloads/${encodedUrl}`)
-      if (localRes.ok) {
-        const text = await localRes.text()
-        if (text && text.trim().length > 0) {
-          const lines = parseLrc(text)
-          if (lines && lines.length > 0) {
-            lyricsCache.set(key, lines)
-            return lines
-          }
-        }
-      }
-    } catch (e) {
+  try {
+    const ast = await api.getTrackLyrics(t.id)
+    if (!ast || !ast.lines) {
+      throw new Error('No lyrics available')
     }
+    lyricsCache.set(key, ast)
+    return ast
+  } catch (err) {
+    if (err.response && err.response.status === 404) {
+      throw new Error('Lyrics not found')
+    }
+    throw new Error('Failed to fetch lyrics')
   }
-
-  const params = new URLSearchParams()
-  if (t.title) params.append('track_name', t.title)
-  if (t.artist) params.append('artist_name', t.artist)
-
-  const res = await fetch(`https://lrclib.net/api/get?${params}`)
-  if (!res.ok)
-    throw new Error(
-      res.status === 404 ? 'Lyrics not found' : 'Failed to fetch lyrics'
-    )
-
-  const data = await res.json()
-  let lines = []
-
-  if (data.syncedLyrics) {
-    lines = parseLrc(data.syncedLyrics)
-  } else if (data.plainLyrics) {
-    lines = parseLrc(data.plainLyrics)
-  } else {
-    throw new Error('No lyrics available')
-  }
-
-  lyricsCache.set(key, lines)
-  return lines
 }
 
 function applyLyrics(lines) {
@@ -583,12 +562,13 @@ function applyLyrics(lines) {
 }
 
 .lyric-word {
-  display: inline-grid;
+  display: inline-block;
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0) scale(var(--word-scale, 1));
   margin-right: 0.1em;
   margin-bottom: 0.25em;
   transform-origin: bottom center;
   cursor: pointer;
-  will-change: transform;
   backface-visibility: hidden;
 }
 
