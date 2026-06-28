@@ -636,7 +636,7 @@ def embed_lyrics(path: Path, lyrics: 'lyrics_mod.NormalizedLyrics') -> None:
     """Embed plain lyrics into the audio tag and write a .lrc sidecar
     next to it when synced lyrics are available."""
 
-    if not path.exists():
+    if not lyrics or not path.exists():
         return
 
     sidecar_text = lyrics.to_sidecar_lrc()

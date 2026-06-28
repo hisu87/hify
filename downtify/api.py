@@ -173,8 +173,9 @@ async def get_lyrics_endpoint(id: str):
         
         fut.set_result(lyrics_ast)
         return lyrics_ast
-    except Exception as e:
-        fut.set_exception(e)
+    except BaseException as e:
+        if not fut.done():
+            fut.cancel()
         raise
     finally:
         _INFLIGHT_RESOLVES.pop(id, None)
