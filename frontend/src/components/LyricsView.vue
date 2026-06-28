@@ -681,19 +681,19 @@ function applyLyrics(lines) {
   transform-origin: bottom center;
   cursor: pointer;
   backface-visibility: hidden;
+  font-size: clamp(1.6rem, 4.5vw, 3.75rem);
+  font-weight: 900;
+  letter-spacing: 0.05rem;
 }
 
 .lyric-word[data-has-space='true'] {
-  margin-right: 0.28em;
+  margin-right: 0.35em;
 }
 
 .word-base {
   grid-column: 1;
   grid-row: 1;
   color: white;
-  font-size: clamp(1.6rem, 4.5vw, 3.75rem);
-  font-weight: 900;
-  letter-spacing: 0.1rem;
   white-space: pre;
   opacity: 0.28;
 }
@@ -715,9 +715,6 @@ function applyLyrics(lines) {
 .word-hl {
   grid-column: 1;
   grid-row: 1;
-  font-size: clamp(1.6rem, 4.5vw, 3.75rem);
-  font-weight: 900;
-  letter-spacing: 0.1rem;
   white-space: pre;
   color: white;
   -webkit-mask-image: linear-gradient(
