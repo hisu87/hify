@@ -18,7 +18,9 @@ if os.path.exists('/data'):
 else:
     CACHE_DB_PATH = './data/lyrics_cache.db'
 
+import httpx
 import re
+import syncedlyrics
 
 from downtify.lyrics_db import cache_lyrics, get_cached_lyrics
 from downtify.smart_matching import is_metadata_match
@@ -396,7 +398,7 @@ class LyricsResolver:
                             cand_meta['duration_ms'] = int(
                                 (int(parts[0]) * 60 + float(parts[1])) * 1000
                             )
-                        except:
+                        except Exception:
                             cand_meta['duration_ms'] = 0
                 else:
                     cand_meta['duration_ms'] = 0
@@ -494,12 +496,11 @@ class LyricsResolver:
 class AmllTtmlProvider(LyricsProvider):
     name = 'amll'
 
-    async def fetch(self, track: dict[str, Any]) -> Optional[dict[str, Any]]:
+    async def fetch(self, track: dict[str, Any]) -> Optional[dict[str, Any]]:  # noqa: PLR6301
         isrc = track.get('isrc')
         if not isrc:
             return None
         url = f'https://raw.githubusercontent.com/amll-dev/amll-ttml-db/main/{isrc}.ttml'
-        import httpx
 
         try:
             async with httpx.AsyncClient() as client:
@@ -525,18 +526,17 @@ class AmllTtmlProvider(LyricsProvider):
             track_id=track.get('id', ''),
             isrc=track.get('isrc'),
             provider_name=self.name,
-            sync_level='word' if any(l.lead for l in lines) else 'line',
+            sync_level='word'
+            if any(line_obj.lead for line_obj in lines)
+            else 'line',
             lines=lines,
         )
-
-
-import syncedlyrics
 
 
 class NetEaseYrcProvider(LyricsProvider):
     name = 'netease'
 
-    async def fetch(self, track: dict[str, Any]) -> Optional[dict[str, Any]]:
+    async def fetch(self, track: dict[str, Any]) -> Optional[dict[str, Any]]:  # noqa: PLR6301
         title = track.get('title', '')
         artist = track.get('subtitle', track.get('artist', ''))
         term = f'{title} {artist}'.strip()
@@ -567,7 +567,9 @@ class NetEaseYrcProvider(LyricsProvider):
             track_id=track.get('id', ''),
             isrc=track.get('isrc'),
             provider_name=self.name,
-            sync_level='word' if any(l.lead for l in lines) else 'line',
+            sync_level='word'
+            if any(line_obj.lead for line_obj in lines)
+            else 'line',
             lines=lines,
         )
 
@@ -575,7 +577,7 @@ class NetEaseYrcProvider(LyricsProvider):
 class MusixmatchTokenProvider(LyricsProvider):
     name = 'musixmatch'
 
-    async def fetch(self, track: dict[str, Any]) -> Optional[dict[str, Any]]:
+    async def fetch(self, track: dict[str, Any]) -> Optional[dict[str, Any]]:  # noqa: PLR6301
         title = track.get('title', '')
         artist = track.get('subtitle', track.get('artist', ''))
         term = f'{title} {artist}'.strip()
@@ -605,7 +607,9 @@ class MusixmatchTokenProvider(LyricsProvider):
             track_id=track.get('id', ''),
             isrc=track.get('isrc'),
             provider_name=self.name,
-            sync_level='word' if any(l.lead for l in lines) else 'line',
+            sync_level='word'
+            if any(line_obj.lead for line_obj in lines)
+            else 'line',
             lines=lines,
         )
 
@@ -613,7 +617,7 @@ class MusixmatchTokenProvider(LyricsProvider):
 class LrcLibProvider(LyricsProvider):
     name = 'lrclib'
 
-    async def fetch(self, track: dict[str, Any]) -> Optional[dict[str, Any]]:
+    async def fetch(self, track: dict[str, Any]) -> Optional[dict[str, Any]]:  # noqa: PLR6301
         title = track.get('title', '')
         artist = track.get('subtitle', track.get('artist', ''))
         album = track.get('album', '')
@@ -626,7 +630,6 @@ class LrcLibProvider(LyricsProvider):
             'album_name': album,
             'duration': duration,
         }
-        import httpx
 
         try:
             async with httpx.AsyncClient() as client:
@@ -670,7 +673,9 @@ class LrcLibProvider(LyricsProvider):
             track_id=track.get('id', ''),
             isrc=track.get('isrc'),
             provider_name=self.name,
-            sync_level='word' if any(l.lead for l in lines) else 'line',
+            sync_level='word'
+            if any(line_obj.lead for line_obj in lines)
+            else 'line',
             lines=lines,
         )
 

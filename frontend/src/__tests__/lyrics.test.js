@@ -49,13 +49,19 @@ describe('Lyrics Parser and Animator', () => {
 
   it('interpolates time smoothly when isPlaying is true', () => {
     const animator = new LyricsAnimator()
-    animator.lines = [{ startTime: 0, endTime: 10, rawText: 'Line 1', lead: [] }]
-    
+    animator.lines = [
+      { startTime: 0, endTime: 10, rawText: 'Line 1', lead: [] },
+    ]
+
     // Mock the window.devicePixelRatio since LyricsAnimator checks it
     global.window = { devicePixelRatio: 2 }
 
     let mockTime = 5.0
-    animator.audioElement = { get currentTime() { return mockTime } }
+    animator.audioElement = {
+      get currentTime() {
+        return mockTime
+      },
+    }
     animator.isPlaying = () => true
 
     // Frame 1: initial sync
@@ -68,18 +74,24 @@ describe('Lyrics Parser and Animator', () => {
     animator._loop(1100)
     expect(animator._interpolatedTime).toBeCloseTo(5.1, 2)
     expect(animator._lastSyncTs).toBe(1100)
-    
+
     delete global.window
   })
 
   it('snaps time when a seek is detected', () => {
     const animator = new LyricsAnimator()
-    animator.lines = [{ startTime: 0, endTime: 10, rawText: 'Line 1', lead: [] }]
-    
+    animator.lines = [
+      { startTime: 0, endTime: 10, rawText: 'Line 1', lead: [] },
+    ]
+
     global.window = { devicePixelRatio: 2 }
-    
+
     let mockTime = 5.0
-    animator.audioElement = { get currentTime() { return mockTime } }
+    animator.audioElement = {
+      get currentTime() {
+        return mockTime
+      },
+    }
     animator.isPlaying = () => true
 
     // Frame 1
@@ -89,7 +101,7 @@ describe('Lyrics Parser and Animator', () => {
     mockTime = 20.0
     animator._loop(1100)
     expect(animator._interpolatedTime).toBe(20.0)
-    
+
     delete global.window
   })
 

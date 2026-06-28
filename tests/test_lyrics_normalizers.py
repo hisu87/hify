@@ -2,7 +2,14 @@
 
 import re
 
-from downtify.lyrics import NormalizedLine, NormalizedToken
+from downtify.lyrics import (
+    AmllTtmlProvider,
+    LrcLibProvider,
+    MusixmatchTokenProvider,
+    NetEaseYrcProvider,
+    NormalizedLine,
+    NormalizedToken,
+)
 
 
 def enforce_time_rules(tokens: list[NormalizedToken]) -> list[NormalizedToken]:
@@ -56,10 +63,10 @@ LRC_LINE_RE = re.compile(r'^\[(\d+):(\d+\.\d+|\d+)\](.*)$')
 LRC_WORD_RE = re.compile(r'<(\d+):(\d+\.\d+|\d+)>([^<]*)')
 
 
-def parse_enhanced_lrc(lrc_str: str) -> list[NormalizedLine]:
+def parse_enhanced_lrc(lrc_str: str) -> list[NormalizedLine]:  # noqa: PLR0914
     lines = []
-    for line in lrc_str.split('\n'):
-        line = line.strip()
+    for raw_line in lrc_str.split('\n'):
+        line = raw_line.strip()
         if not line:
             continue
         line_match = LRC_LINE_RE.match(line)
@@ -187,14 +194,6 @@ def test_parse_plain_lrc():
     assert lines[0].lead[1].text == 'World'
     assert lines[0].lead[1].start_time == 12.0
     assert lines[0].lead[1].end_time == 14.0
-
-
-from downtify.lyrics import (
-    AmllTtmlProvider,
-    LrcLibProvider,
-    MusixmatchTokenProvider,
-    NetEaseYrcProvider,
-)
 
 
 def test_amll_provider_normalize():

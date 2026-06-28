@@ -107,8 +107,11 @@ export class LyricsAnimator {
     const rawTime = this.audioElement ? this.audioElement.currentTime : 0
     const isPlaying = this.isPlaying ? this.isPlaying() : false
 
-    const isSeek = this._lastRawTime === null || this._lastRawTime === undefined || Math.abs(rawTime - this._lastRawTime) > 0.5
-    
+    const isSeek =
+      this._lastRawTime === null ||
+      this._lastRawTime === undefined ||
+      Math.abs(rawTime - this._lastRawTime) > 0.5
+
     if (isSeek) {
       this._interpolatedTime = rawTime
       this._lastSyncTs = ts
@@ -139,7 +142,8 @@ export class LyricsAnimator {
     // Sliding Cursor or Binary Search (Giai đoạn 2.1)
     let cursor = this._cursorIdx
     if (isSeek) {
-      let l = 0, r = lines.length - 1
+      let l = 0,
+        r = lines.length - 1
       let found = 0
       while (l <= r) {
         const mid = Math.floor((l + r) / 2)
@@ -152,7 +156,8 @@ export class LyricsAnimator {
       }
       cursor = found
     } else {
-      while (cursor < lines.length - 1 && now >= lines[cursor + 1].startTime) cursor++
+      while (cursor < lines.length - 1 && now >= lines[cursor + 1].startTime)
+        cursor++
       while (cursor > 0 && now < lines[cursor].startTime) cursor--
     }
     this._cursorIdx = cursor
@@ -169,9 +174,27 @@ export class LyricsAnimator {
       const isSungLine = li < cursor
 
       // Process lead and background vocals
-      this._processTokens(line.lead, li, false, now, dt, isActiveLine, isSungLine, isMobile)
+      this._processTokens(
+        line.lead,
+        li,
+        false,
+        now,
+        dt,
+        isActiveLine,
+        isSungLine,
+        isMobile
+      )
       if (line.background) {
-        this._processTokens(line.background, li, true, now, dt, isActiveLine, isSungLine, isMobile)
+        this._processTokens(
+          line.background,
+          li,
+          true,
+          now,
+          dt,
+          isActiveLine,
+          isSungLine,
+          isMobile
+        )
       }
     }
 
@@ -189,26 +212,48 @@ export class LyricsAnimator {
     this._rafId = requestAnimationFrame(this._loop.bind(this))
   }
 
-  _processTokens(tokens, lineIdx, isBg, now, dt, isActiveLine, isSungLine, isMobile) {
+  _processTokens(
+    tokens,
+    lineIdx,
+    isBg,
+    now,
+    dt,
+    isActiveLine,
+    isSungLine,
+    isMobile
+  ) {
     if (!tokens || !tokens.length) return
 
     // Token State Machine (Giai đoạn 2.2)
-    const states = tokens.map(token => {
+    const states = tokens.map((token) => {
       if (now < token.startTime) return TokenState.FUTURE
       if (now >= token.endTime) return TokenState.PAST
       return TokenState.ACTIVE
     })
 
     // Prepare goals
-    const goals = tokens.map(() => ({ scale: 1, y: 0, glow: 0, fill: 0, opacity: 0 }))
+    const goals = tokens.map(() => ({
+      scale: 1,
+      y: 0,
+      glow: 0,
+      fill: 0,
+      opacity: 0,
+    }))
 
     // First pass: Calculate base goals
     for (let wi = 0; wi < tokens.length; wi++) {
       const token = tokens[wi]
       const state = states[wi]
-      
+
       if (state === TokenState.ACTIVE) {
-        const progress = Math.max(0, Math.min(1, (now - token.startTime) / Math.max(token.endTime - token.startTime, 0.05)))
+        const progress = Math.max(
+          0,
+          Math.min(
+            1,
+            (now - token.startTime) /
+              Math.max(token.endTime - token.startTime, 0.05)
+          )
+        )
         goals[wi].scale = SCALE_CURVE.at(progress)
         goals[wi].y = Y_OFFSET_CURVE.at(progress)
         goals[wi].glow = GLOW_CURVE.at(progress)
@@ -244,11 +289,27 @@ export class LyricsAnimator {
         const activeScale = goals[wi].scale
         if (activeScale > 1.0) {
           // Falloff 1
-          if (wi - 1 >= 0 && states[wi - 1] !== TokenState.ACTIVE) goals[wi - 1].scale = Math.max(goals[wi - 1].scale, 1.0 + (activeScale - 1.0) * 0.38)
-          if (wi + 1 < tokens.length && states[wi + 1] !== TokenState.ACTIVE) goals[wi + 1].scale = Math.max(goals[wi + 1].scale, 1.0 + (activeScale - 1.0) * 0.38)
+          if (wi - 1 >= 0 && states[wi - 1] !== TokenState.ACTIVE)
+            goals[wi - 1].scale = Math.max(
+              goals[wi - 1].scale,
+              1.0 + (activeScale - 1.0) * 0.38
+            )
+          if (wi + 1 < tokens.length && states[wi + 1] !== TokenState.ACTIVE)
+            goals[wi + 1].scale = Math.max(
+              goals[wi + 1].scale,
+              1.0 + (activeScale - 1.0) * 0.38
+            )
           // Falloff 2
-          if (wi - 2 >= 0 && states[wi - 2] !== TokenState.ACTIVE) goals[wi - 2].scale = Math.max(goals[wi - 2].scale, 1.0 + (activeScale - 1.0) * 0.12)
-          if (wi + 2 < tokens.length && states[wi + 2] !== TokenState.ACTIVE) goals[wi + 2].scale = Math.max(goals[wi + 2].scale, 1.0 + (activeScale - 1.0) * 0.12)
+          if (wi - 2 >= 0 && states[wi - 2] !== TokenState.ACTIVE)
+            goals[wi - 2].scale = Math.max(
+              goals[wi - 2].scale,
+              1.0 + (activeScale - 1.0) * 0.12
+            )
+          if (wi + 2 < tokens.length && states[wi + 2] !== TokenState.ACTIVE)
+            goals[wi + 2].scale = Math.max(
+              goals[wi + 2].scale,
+              1.0 + (activeScale - 1.0) * 0.12
+            )
         }
       }
     }
@@ -280,12 +341,27 @@ export class LyricsAnimator {
       const fill = Math.max(0, Math.min(100, store.fillSpring.position))
       const opacity = Math.max(0, Math.min(1, store.opacitySpring.position))
 
-      setStyleIfChanged(wordEl, 'transform', `translate3d(0, ${y.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`, 0.0005)
+      setStyleIfChanged(
+        wordEl,
+        'transform',
+        `translate3d(0, ${y.toFixed(2)}px, 0) scale(${scale.toFixed(4)})`,
+        0.0005
+      )
 
       if (!isMobile) {
         const glowClamped = Math.max(0, Math.min(1, glow))
-        setStyleIfChanged(wordEl, '--glow-opacity', glowClamped.toFixed(3), 0.005)
-        setStyleIfChanged(wordEl, '--glow-blur', `${(glowClamped * 18).toFixed(1)}px`, 0.3)
+        setStyleIfChanged(
+          wordEl,
+          '--glow-opacity',
+          glowClamped.toFixed(3),
+          0.005
+        )
+        setStyleIfChanged(
+          wordEl,
+          '--glow-blur',
+          `${(glowClamped * 18).toFixed(1)}px`,
+          0.3
+        )
       } else {
         setStyleIfChanged(wordEl, '--glow-opacity', '0', 0)
         setStyleIfChanged(wordEl, '--glow-blur', '0px', 0)
@@ -294,7 +370,12 @@ export class LyricsAnimator {
       if (hlEl) {
         setStyleIfChanged(hlEl, '--fill-pct', `${fill.toFixed(1)}%`, 0.4)
         setStyleIfChanged(hlEl, 'opacity', opacity.toFixed(3), 0.004)
-        setStyleIfChanged(hlEl, 'webkitMaskImage', fill >= 99.5 ? 'none' : '', 0)
+        setStyleIfChanged(
+          hlEl,
+          'webkitMaskImage',
+          fill >= 99.5 ? 'none' : '',
+          0
+        )
         setStyleIfChanged(hlEl, 'maskImage', fill >= 99.5 ? 'none' : '', 0)
       }
 
@@ -343,7 +424,12 @@ export class LyricsAnimator {
         blurPx = Math.min(MAX_LINE_BLUR, blurPx)
       }
 
-      setStyleIfChanged(el, 'filter', blurPx < 0.15 ? 'none' : `blur(${blurPx.toFixed(1)}px)`, 0.08)
+      setStyleIfChanged(
+        el,
+        'filter',
+        blurPx < 0.15 ? 'none' : `blur(${blurPx.toFixed(1)}px)`,
+        0.08
+      )
       setStyleIfChanged(el, 'transform', `scale(${scale.toFixed(3)})`, 0.005)
     }
   }

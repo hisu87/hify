@@ -2,6 +2,7 @@
 
 from downtify.lyrics import parse_amll_ttml
 
+
 def test_parse_amll_ttml():
     xml = """
     <tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata">

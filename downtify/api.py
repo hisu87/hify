@@ -36,7 +36,7 @@ from fastapi import (
 )
 from loguru import logger
 
-from . import m3u, providers, spotify, lyrics
+from . import lyrics, m3u, providers, spotify
 from .downloader import Downloader
 from .monitor import PlaylistMonitorDB, check_playlist
 
@@ -143,7 +143,7 @@ def get_version() -> str:
 @router.get('/api/v1/tracks/{id}/lyrics')
 async def get_lyrics_endpoint(id: str):
     if id in _INFLIGHT_RESOLVES:
-        logger.debug(f"Coalescing stampede request for track {id}...")
+        logger.debug(f'Coalescing stampede request for track {id}...')
         return await _INFLIGHT_RESOLVES[id]
 
     loop = asyncio.get_running_loop()
@@ -154,7 +154,9 @@ async def get_lyrics_endpoint(id: str):
         # TRAP 1: Hydrate track metadata from Spotify
         track_dict = await asyncio.to_thread(spotify.track_from_id, id)
         if not track_dict:
-            raise HTTPException(status_code=404, detail="Track metadata not found")
+            raise HTTPException(
+                status_code=404, detail='Track metadata not found'
+            )
 
         effective_providers = _effective_lyrics_providers(state.settings)
         provider_instances = []
@@ -167,13 +169,13 @@ async def get_lyrics_endpoint(id: str):
                 provider_instances.append(lyrics.LrcLibProvider())
             elif p == 'musixmatch':
                 provider_instances.append(lyrics.MusixmatchTokenProvider())
-        
+
         resolver = lyrics.LyricsResolver(providers=provider_instances)
         lyrics_ast = await resolver.resolve(track_dict)
-        
+
         fut.set_result(lyrics_ast)
         return lyrics_ast
-    except BaseException as e:
+    except BaseException:
         if not fut.done():
             fut.cancel()
         raise

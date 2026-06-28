@@ -77,8 +77,8 @@ async def cache_lyrics(track_id: str, payload: dict):
                     """
                     INSERT INTO tracks_lyrics (id, status, created_at, updated_at)
                     VALUES (?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET 
-                        status=excluded.status, 
+                    ON CONFLICT(id) DO UPDATE SET
+                        status=excluded.status,
                         updated_at=excluded.updated_at
                 """,
                     (track_id, 'NOT_FOUND', now, now),
@@ -88,7 +88,7 @@ async def cache_lyrics(track_id: str, payload: dict):
                 if not lines:
                     return  # DO NOT CACHE OK if no lines (Cache Poisoning Protection)
 
-                from downtify.lyrics import NormalizedLine
+                from downtify.lyrics import NormalizedLine  # noqa: PLC0415
 
                 lines_list = []
                 for line in lines:
@@ -132,10 +132,10 @@ async def cache_lyrics(track_id: str, payload: dict):
                     """
                     INSERT INTO tracks_lyrics (id, isrc, provider, status, sync_level, lines_json, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET 
+                    ON CONFLICT(id) DO UPDATE SET
                         isrc=excluded.isrc,
                         provider=excluded.provider,
-                        status=excluded.status, 
+                        status=excluded.status,
                         sync_level=excluded.sync_level,
                         lines_json=excluded.lines_json,
                         updated_at=excluded.updated_at

@@ -56,7 +56,9 @@ export function parseLrc(lrcStr) {
       cleanContent = cleanContent.substring(4).trim()
     }
 
-    const isInstrumental = cleanContent === '♪' || cleanContent.toLowerCase().includes('[instrumental]')
+    const isInstrumental =
+      cleanContent === '♪' ||
+      cleanContent.toLowerCase().includes('[instrumental]')
 
     // Detect enhanced word timing
     const wordMatches = [...cleanContent.matchAll(wordRegex)]
@@ -76,16 +78,17 @@ export function parseLrc(lrcStr) {
       _hasWordTiming: hasWordTiming,
       _wordMatches: wordMatches,
       _content: cleanContent,
-      _isBackground: isBackground
+      _isBackground: isBackground,
     })
   }
 
   // Fill duration và compute tokens
   const finalLines = []
-  
+
   for (let i = 0; i < result.length; i++) {
     const line = result[i]
-    const nextTime = i < result.length - 1 ? result[i + 1].startTime : line.startTime + 5.0
+    const nextTime =
+      i < result.length - 1 ? result[i + 1].startTime : line.startTime + 5.0
     line.endTime = Math.min(nextTime, line.startTime + 10.0) // Cap at 10s
 
     let tokens = []
@@ -105,7 +108,7 @@ export function parseLrc(lrcStr) {
     delete line._wordMatches
     delete line._content
     delete line._isBackground
-    
+
     finalLines.push(line)
   }
 
@@ -113,7 +116,10 @@ export function parseLrc(lrcStr) {
   for (const line of finalLines) {
     if (line.background && mergedLines.length > 0) {
       const prev = mergedLines[mergedLines.length - 1]
-      if (line.startTime >= prev.startTime && line.startTime <= prev.endTime + 2.0) {
+      if (
+        line.startTime >= prev.startTime &&
+        line.startTime <= prev.endTime + 2.0
+      ) {
         prev.background = line.background
         continue
       }
@@ -137,8 +143,10 @@ function buildWordTimingsFromEnhanced(line, nextTime) {
 
     const textStart = m.index + m[0].length
     const textEnd = nextM ? nextM.index : content.length
-    const rawWordText = content.substring(textStart, textEnd).replace(wordRegex, '')
-    
+    const rawWordText = content
+      .substring(textStart, textEnd)
+      .replace(wordRegex, '')
+
     // Check trailing space before trimming
     const isTrailingSpace = rawWordText.endsWith(' ')
     const wordText = rawWordText.trim()
@@ -178,18 +186,19 @@ function estimateWordTimings(line) {
     const token = words[i]
     if (token.trim() === '') continue // Skip standalone spaces
 
-    const isTrailingSpace = (i + 1 < words.length && words[i + 1].match(/^\s+$/)) !== null
-    
+    const isTrailingSpace =
+      (i + 1 < words.length && words[i + 1].match(/^\s+$/)) !== null
+
     const ratio = token.length / totalChars
     const wordDuration = ratio * duration
-    
+
     tokens.push({
       text: token,
       startTime: currentTime,
       endTime: currentTime + wordDuration,
-      isTrailingSpace
+      isTrailingSpace,
     })
-    
+
     currentTime += wordDuration
   }
 

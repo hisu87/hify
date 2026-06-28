@@ -57,27 +57,43 @@
             v-for="item in visibleLines"
             :key="item.index"
             class="lyric-line flex-col"
-            :class="[getLineClass(item.index), `agent-${item.line.agent_id || 'default'}`, { 'scrubbing-active': isScrubbing && scrubLineIdx === item.index, 'scrubbing-dimmed': isScrubbing && scrubLineIdx !== item.index }]"
+            :class="[
+              getLineClass(item.index),
+              `agent-${item.line.agent_id || 'default'}`,
+              {
+                'scrubbing-active': isScrubbing && scrubLineIdx === item.index,
+                'scrubbing-dimmed': isScrubbing && scrubLineIdx !== item.index,
+              },
+            ]"
             :ref="(el) => registerLineEl(item.index, el)"
             @mousedown="onLineDown(item.index)"
             @touchstart="onLineDown(item.index)"
             @click="onLineClick(item.index, item.line.startTime)"
           >
             <!-- Scrub indicator -->
-            <div v-if="isScrubbing && scrubLineIdx === item.index" class="scrub-indicator">
+            <div
+              v-if="isScrubbing && scrubLineIdx === item.index"
+              class="scrub-indicator"
+            >
               <Icon icon="ph:play-fill" class="h-4 w-4 mr-2" />
             </div>
 
             <!-- Instrument / empty line -->
-            <span v-if="item.line.isInstrumental || !item.line.lead.length" class="lyric-instrument">
+            <span
+              v-if="item.line.isInstrumental || !item.line.lead.length"
+              class="lyric-instrument"
+            >
               {{ item.line.isInstrumental ? '• • •' : '♪' }}
             </span>
 
             <!-- Lead Words -->
-            <div class="lead-words flex flex-wrap" :class="getAlignClass(item.index)">
+            <div
+              class="lead-words flex flex-wrap"
+              :class="getAlignClass(item.index)"
+            >
               <span
                 v-for="(word, wi) in item.line.lead"
-                :key="'lead-'+wi"
+                :key="'lead-' + wi"
                 class="lyric-word"
                 :data-has-space="word.isTrailingSpace"
                 :ref="(el) => registerWordEl(item.index, wi, el, false)"
@@ -90,10 +106,14 @@
             </div>
 
             <!-- Background Words -->
-            <div v-if="item.line.background" class="bg-words flex flex-wrap scale-75 opacity-70 mt-1" :class="getAlignClass(item.index)">
+            <div
+              v-if="item.line.background"
+              class="bg-words flex flex-wrap scale-75 opacity-70 mt-1"
+              :class="getAlignClass(item.index)"
+            >
               <span
                 v-for="(word, wi) in item.line.background"
-                :key="'bg-'+wi"
+                :key="'bg-' + wi"
                 class="lyric-word"
                 :data-has-space="word.isTrailingSpace"
                 :ref="(el) => registerWordEl(item.index, wi, el, true)"
@@ -145,10 +165,14 @@ const activeLineIdx = ref(-1)
 const estimatedLineHeight = 80
 const measuredHeights = new Map()
 const visibleStartIndex = computed(() => Math.max(0, activeLineIdx.value - 4))
-const visibleEndIndex = computed(() => Math.min(parsedLyrics.value.length, activeLineIdx.value + 6))
+const visibleEndIndex = computed(() =>
+  Math.min(parsedLyrics.value.length, activeLineIdx.value + 6)
+)
 const visibleLines = computed(() => {
   if (parsedLyrics.value.length === 0) return []
-  return parsedLyrics.value.slice(visibleStartIndex.value, visibleEndIndex.value).map((l, i) => ({ line: l, index: visibleStartIndex.value + i }))
+  return parsedLyrics.value
+    .slice(visibleStartIndex.value, visibleEndIndex.value)
+    .map((l, i) => ({ line: l, index: visibleStartIndex.value + i }))
 })
 
 const topSpacerHeight = computed(() => {
@@ -349,8 +373,7 @@ async function prefetchLyrics() {
   if (lyricsCache.has(key)) return
   try {
     await getLyrics(key)
-  } catch {
-  }
+  } catch {}
 }
 
 let _lastFetchId = null
@@ -358,7 +381,7 @@ let _lastFetchId = null
 async function fetchLyrics() {
   if (!currentTrack.value) return
   const key = cacheKey()
-  
+
   const reqId = Symbol()
   _lastFetchId = reqId
 
@@ -432,7 +455,11 @@ function applyLyrics(lines) {
       }
     }
     const containerH = scrollerEl.value?.clientHeight || 600
-    let snap = -(topPad.value + (startIdx * estimatedLineHeight) - containerH * 0.4)
+    let snap = -(
+      topPad.value +
+      startIdx * estimatedLineHeight -
+      containerH * 0.4
+    )
     animator._scrollSpring.snapTo(snap)
     scrollY.value = snap
     activeLineIdx.value = startIdx
@@ -488,8 +515,20 @@ function applyLyrics(lines) {
   z-index: 10;
   flex: 1;
   overflow: hidden;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 82%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 82%, transparent 100%);
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 12%,
+    black 82%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 12%,
+    black 82%,
+    transparent 100%
+  );
 }
 
 .lyrics-list {
@@ -510,7 +549,9 @@ function applyLyrics(lines) {
   line-height: 1.1;
   cursor: pointer;
   will-change: filter, transform;
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
+  transition:
+    transform 0.25s cubic-bezier(0.25, 1, 0.5, 1),
+    opacity 0.2s ease;
 }
 
 .scrubbing-active {
@@ -557,7 +598,8 @@ function applyLyrics(lines) {
   align-self: center;
 }
 
-.lead-words, .bg-words {
+.lead-words,
+.bg-words {
   width: 100%;
 }
 
@@ -572,7 +614,7 @@ function applyLyrics(lines) {
   backface-visibility: hidden;
 }
 
-.lyric-word[data-has-space="true"] {
+.lyric-word[data-has-space='true'] {
   margin-right: 0.28em;
 }
 
@@ -592,8 +634,13 @@ function applyLyrics(lines) {
   grid-row: 1;
   display: inline-grid;
   will-change: filter;
-  filter: drop-shadow(0 0 var(--glow-blur, 0px) rgba(255, 255, 255, var(--glow-opacity, 0)))
-          drop-shadow(0 0 calc(var(--glow-blur, 0px) * 2.5) rgba(255, 255, 255, calc(var(--glow-opacity, 0) * 0.5)));
+  filter: drop-shadow(
+      0 0 var(--glow-blur, 0px) rgba(255, 255, 255, var(--glow-opacity, 0))
+    )
+    drop-shadow(
+      0 0 calc(var(--glow-blur, 0px) * 2.5)
+        rgba(255, 255, 255, calc(var(--glow-opacity, 0) * 0.5))
+    );
 }
 
 .word-hl {
@@ -604,10 +651,23 @@ function applyLyrics(lines) {
   letter-spacing: 0.1rem;
   white-space: pre;
   color: white;
-  -webkit-mask-image: linear-gradient(90deg, black calc(var(--fill-pct, 0%) - 18%), transparent var(--fill-pct, 0%), transparent 100%);
-  mask-image: linear-gradient(90deg, black calc(var(--fill-pct, 0%) - 18%), transparent var(--fill-pct, 0%), transparent 100%);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    black calc(var(--fill-pct, 0%) - 18%),
+    transparent var(--fill-pct, 0%),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    black calc(var(--fill-pct, 0%) - 18%),
+    transparent var(--fill-pct, 0%),
+    transparent 100%
+  );
   opacity: 0.01;
-  will-change: opacity, mask-image, -webkit-mask-image;
+  will-change:
+    opacity,
+    mask-image,
+    -webkit-mask-image;
 }
 
 .lyrics-state {
@@ -623,28 +683,67 @@ function applyLyrics(lines) {
   opacity: 0.5;
 }
 
-.lyrics-state-dots { display: flex; gap: 0.5rem; }
+.lyrics-state-dots {
+  display: flex;
+  gap: 0.5rem;
+}
 .lyrics-state-dots span {
-  width: 10px; height: 10px; border-radius: 50%; background: white; opacity: 0.7;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  opacity: 0.7;
   animation: dot-bounce 1.4s ease-in-out infinite both;
 }
-.lyrics-state-dots span:nth-child(1) { animation-delay: 0s; }
-.lyrics-state-dots span:nth-child(2) { animation-delay: 0.2s; }
-.lyrics-state-dots span:nth-child(3) { animation-delay: 0.4s; }
+.lyrics-state-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+.lyrics-state-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.lyrics-state-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 @keyframes dot-bounce {
-  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .lyrics-modal-enter-active,
-.lyrics-modal-leave-active { transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+.lyrics-modal-leave-active {
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+}
 .lyrics-modal-enter-from,
-.lyrics-modal-leave-to { opacity: 0; transform: translateY(24px); }
+.lyrics-modal-leave-to {
+  opacity: 0;
+  transform: translateY(24px);
+}
 
 .icon-btn {
-  display: flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem;
-  border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: none; cursor: pointer; color: white; transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  cursor: pointer;
+  color: white;
+  transition: background 0.2s;
 }
-.icon-btn:hover { background: rgba(255, 255, 255, 0.2); }
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
 </style>
