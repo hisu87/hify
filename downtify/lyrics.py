@@ -18,8 +18,9 @@ if os.path.exists('/data'):
 else:
     CACHE_DB_PATH = './data/lyrics_cache.db'
 
-import httpx
 import re
+
+import httpx
 import syncedlyrics
 
 from downtify.lyrics_db import cache_lyrics, get_cached_lyrics
