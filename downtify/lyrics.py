@@ -345,16 +345,11 @@ class LyricsResolver:
                                 start_time=ld['start_time'],
                                 end_time=ld['end_time'],
                                 raw_text=ld['text'],
-                                is_instrumental=False,
+                                is_instrumental=ld.get('is_instrumental', False),
                                 agent_id=ld['agent_id'],
                                 lead=[
                                     NormalizedToken(**t) for t in ld['lead']
                                 ],
-                                background=[
-                                    NormalizedToken(**t) for t in ld['bg']
-                                ]
-                                if ld.get('bg')
-                                else None,
                             )
                         )
                     return NormalizedLyrics(

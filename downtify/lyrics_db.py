@@ -96,30 +96,19 @@ async def cache_lyrics(track_id: str, payload: dict):
                         l_dict = {
                             'start_time': line.start_time,
                             'end_time': line.end_time,
-                            'duration': line.duration,
-                            'text': line.text,
+                            'text': line.raw_text,
+                            'is_instrumental': line.is_instrumental,
                             'agent_id': line.agent_id,
                             'lead': [
                                 {
                                     'start_time': t.start_time,
                                     'end_time': t.end_time,
-                                    'duration': t.duration,
                                     'text': t.text,
+                                    'is_trailing_space': t.is_trailing_space,
                                 }
                                 for t in line.lead
                             ]
                             if line.lead
-                            else [],
-                            'bg': [
-                                {
-                                    'start_time': t.start_time,
-                                    'end_time': t.end_time,
-                                    'duration': t.duration,
-                                    'text': t.text,
-                                }
-                                for t in line.bg
-                            ]
-                            if line.bg
                             else [],
                         }
                         lines_list.append(l_dict)
