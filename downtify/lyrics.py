@@ -636,9 +636,11 @@ class LrcLibProvider(LyricsProvider):
         params = {
             'track_name': title,
             'artist_name': artist,
-            'album_name': album,
-            'duration': duration,
         }
+        if album:
+            params['album_name'] = album
+        if duration > 0:
+            params['duration'] = duration
 
         try:
             async with httpx.AsyncClient() as client:
