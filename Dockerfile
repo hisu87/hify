@@ -9,17 +9,17 @@ RUN pip install --upgrade pip && \
 
 FROM python:3.13-alpine
 
-LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
-LABEL version="3.0.1"
+LABEL maintainer="hisu87"
+LABEL version="3.0.0"
 LABEL description="Self-hosted Spotify downloader"
 
 LABEL org.opencontainers.image.title="Downtify" \
-      org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker." \
-      org.opencontainers.image.version="3.0.1" \
+      org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker" \
+      org.opencontainers.image.version="3.0.0" \
       org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
       org.opencontainers.image.url="https://github.com/henriquesebastiao/downtify" \
-      org.opencontainers.image.source="https://github.com/henriquesebastiao/downtify" \
-      org.opencontainers.image.licenses="GPL-3.0" \
+      org.opencontainers.image.source="https://github.com/hisu87/downtify" \
+      org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.documentation="https://github.com/henriquesebastiao/downtify#readme" \
       org.opencontainers.image.vendor="Henrique Sebastião" \
       org.opencontainers.image.base.name="python:3.13-alpine"
