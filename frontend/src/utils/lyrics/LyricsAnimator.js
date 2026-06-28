@@ -35,8 +35,7 @@ export class LyricsAnimator {
     // Scroll spring with Critical Damping (Giai đoạn 4.2)
     this._scrollSpring = new Spring(2.2, 1.0, 0)
 
-    this.onFrame = null
-    this.getTime = () => 0
+    this.audioElement = null
     this.isPlaying = () => false
 
     this._interpolatedTime = 0
@@ -105,7 +104,7 @@ export class LyricsAnimator {
     const dt = Math.min((ts - (this._lastTs || ts)) / 1000, 0.1)
     this._lastTs = ts
 
-    const rawTime = this.getTime()
+    const rawTime = this.audioElement ? this.audioElement.currentTime : 0
     const isPlaying = this.isPlaying ? this.isPlaying() : false
 
     const isSeek = this._lastRawTime === null || this._lastRawTime === undefined || Math.abs(rawTime - this._lastRawTime) > 0.5

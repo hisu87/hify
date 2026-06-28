@@ -358,8 +358,8 @@ export function usePlayer() {
     next,
     prev,
     setRepeat,
-    cycleRepeat,
     setShuffle,
     toggleShuffle,
+    getAudio: ensureAudio,
   }
 }

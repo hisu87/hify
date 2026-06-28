@@ -118,6 +118,10 @@ function setSettings(settings) {
   })
 }
 
+function getTrackLyrics(trackId) {
+  return API.get(`/api/v1/tracks/${trackId}/lyrics`).then((res) => res.data)
+}
+
 function ws_onmessage(fn) {
   return (wsConnection.onmessage = fn)
 }
@@ -141,6 +145,7 @@ export default {
   getSettings,
   setSettings,
   check_for_update,
+  getTrackLyrics,
   ws_onmessage,
   ws_onerror,
   getVersion,
