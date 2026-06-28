@@ -377,7 +377,7 @@ class Downloader:
 
         if self.lyrics_providers:
             try:
-                fetched = lyrics_mod.fetch(song, self.lyrics_providers)
+                fetched = lyrics_mod.resolve_sync(song, self.lyrics_providers)
             except Exception:
                 logger.exception('Lyrics fetch crashed for {}', final_path)
                 fetched = None
@@ -632,23 +632,24 @@ def _apply_vorbis_comments(audio: Any, tags: TrackTags) -> None:
         audio['genre'] = tags.genre
 
 
-def embed_lyrics(path: Path, lyrics: 'lyrics_mod.Lyrics') -> None:
+def embed_lyrics(path: Path, lyrics: 'lyrics_mod.NormalizedLyrics') -> None:
     """Embed plain lyrics into the audio tag and write a .lrc sidecar
     next to it when synced lyrics are available."""
 
-    if not path.exists() or not lyrics.has_any():
+    if not path.exists():
         return
 
-    if lyrics.synced:
+    sidecar_text = lyrics.to_sidecar_lrc()
+    if sidecar_text:
         sidecar = path.with_suffix('.lrc')
         try:
-            sidecar.write_text(lyrics.synced, encoding='utf-8')
+            sidecar.write_text(sidecar_text, encoding='utf-8')
         except OSError:
             logger.opt(exception=True).warning(
                 'Could not write LRC sidecar {}', sidecar
             )
 
-    text = lyrics.plain or _strip_lrc_timestamps(lyrics.synced or '')
+    text = lyrics.to_audio_tag_text()
     if not text:
         return
 
@@ -658,7 +659,7 @@ def embed_lyrics(path: Path, lyrics: 'lyrics_mod.Lyrics') -> None:
         if audio.tags is None:
             audio.add_tags()
         audio.tags.delall('USLT')
-        audio.tags.add(USLT(encoding=3, lang='eng', desc='', text=text))
+        audio.tags.add(USLT(encoding=3, lang='xxx', desc='', text=text))
         audio.save(v2_version=3)
     elif suffix in {'m4a', 'mp4', 'aac'}:
         audio = MP4(str(path))

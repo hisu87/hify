@@ -36,7 +36,7 @@ from fastapi import (
 )
 from loguru import logger
 
-from . import m3u, providers, spotify
+from . import m3u, providers, spotify, lyrics
 from .downloader import Downloader
 from .monitor import PlaylistMonitorDB, check_playlist
 
@@ -110,6 +110,7 @@ class AppState:
 
 state = AppState()
 router = APIRouter()
+_INFLIGHT_RESOLVES: dict[str, asyncio.Future] = {}
 
 
 def _load_settings(path: Path) -> dict[str, Any]:
@@ -137,6 +138,46 @@ def _save_settings(path: Path, settings: dict[str, Any]) -> None:
 @router.get('/api/version')
 def get_version() -> str:
     return state.version
+
+
+@router.get('/api/v1/tracks/{id}/lyrics')
+async def get_lyrics_endpoint(id: str):
+    if id in _INFLIGHT_RESOLVES:
+        logger.debug(f"Coalescing stampede request for track {id}...")
+        return await _INFLIGHT_RESOLVES[id]
+
+    loop = asyncio.get_running_loop()
+    fut = loop.create_future()
+    _INFLIGHT_RESOLVES[id] = fut
+
+    try:
+        # TRAP 1: Hydrate track metadata from Spotify
+        track_dict = await asyncio.to_thread(spotify.track_from_id, id)
+        if not track_dict:
+            raise HTTPException(status_code=404, detail="Track metadata not found")
+
+        effective_providers = _effective_lyrics_providers(state.settings)
+        provider_instances = []
+        for p in effective_providers:
+            if p == 'amll':
+                provider_instances.append(lyrics.AmllTtmlProvider())
+            elif p == 'netease':
+                provider_instances.append(lyrics.NetEaseYrcProvider())
+            elif p == 'lrclib':
+                provider_instances.append(lyrics.LrcLibProvider())
+            elif p == 'musixmatch':
+                provider_instances.append(lyrics.MusixmatchTokenProvider())
+        
+        resolver = lyrics.LyricsResolver(providers=provider_instances)
+        lyrics_ast = await resolver.resolve(track_dict)
+        
+        fut.set_result(lyrics_ast)
+        return lyrics_ast
+    except Exception as e:
+        fut.set_exception(e)
+        raise
+    finally:
+        _INFLIGHT_RESOLVES.pop(id, None)
 
 
 @router.get('/api/check_update')
