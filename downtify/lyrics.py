@@ -345,7 +345,9 @@ class LyricsResolver:
                                 start_time=ld['start_time'],
                                 end_time=ld['end_time'],
                                 raw_text=ld['text'],
-                                is_instrumental=ld.get('is_instrumental', False),
+                                is_instrumental=ld.get(
+                                    'is_instrumental', False
+                                ),
                                 agent_id=ld['agent_id'],
                                 lead=[
                                     NormalizedToken(**t) for t in ld['lead']
@@ -399,12 +401,17 @@ class LyricsResolver:
                 else:
                     cand_meta['duration_ms'] = 0
 
-            if cand_meta.get('title') or cand_meta.get('artist'):
-                if not is_metadata_match(track, cand_meta):
-                    logger.debug(
-                        f'{provider.name} rejected by Smart Matching: Track({track.get("title") or track.get("name")}) vs Cand({cand_meta.get("title")})'
-                    )
-                    return None
+            if not (cand_meta.get('title') or cand_meta.get('artist')):
+                logger.debug(
+                    f'{provider.name}: no [ti:]/[ar:] tags found, rejecting unverifiable candidate'
+                )
+                return None
+
+            if not is_metadata_match(track, cand_meta):
+                logger.debug(
+                    f'{provider.name} rejected by Smart Matching: Track({track.get("title") or track.get("name")}) vs Cand({cand_meta.get("title")})'
+                )
+                return None
 
             result = provider.normalize(raw_payload, track)
             if result and result.has_any():

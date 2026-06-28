@@ -22,10 +22,10 @@ def is_metadata_match(track: dict, cand: dict) -> bool:
 
     # Spotify embeds use 'subtitle' for artists string, cand might use 'artist' or 'subtitle'
     track_artist = clean_title_for_matching(
-        track.get('artist', track.get('subtitle', ''))
+        track.get('artist') or track.get('subtitle', '')
     )
     cand_artist = clean_title_for_matching(
-        cand.get('artist', cand.get('subtitle', ''))
+        cand.get('artist') or cand.get('subtitle', '')
     )
 
     title_sim = difflib.SequenceMatcher(None, track_title, cand_title).ratio()
