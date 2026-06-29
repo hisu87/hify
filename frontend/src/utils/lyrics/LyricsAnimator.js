@@ -345,8 +345,18 @@ export class LyricsAnimator {
 
       if (!isMobile) {
         const glowClamped = Math.max(0, Math.min(1, glow))
-        setStyleIfChanged(wordEl, '--glow-opacity', glowClamped.toFixed(3), 0.005)
-        setStyleIfChanged(wordEl, '--glow-scale', (glowClamped * 1.5).toFixed(3), 0.01)
+        setStyleIfChanged(
+          wordEl,
+          '--glow-opacity',
+          glowClamped.toFixed(3),
+          0.005
+        )
+        setStyleIfChanged(
+          wordEl,
+          '--glow-scale',
+          (glowClamped * 1.5).toFixed(3),
+          0.01
+        )
       } else {
         setStyleIfChanged(wordEl, '--glow-opacity', '0', 0)
         setStyleIfChanged(wordEl, '--glow-scale', '0', 0)

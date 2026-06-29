@@ -1,3 +1,12 @@
+# Stage 1: build frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: build backend dependencies
 FROM python:3.13-alpine AS builder
 
 WORKDIR /build
@@ -10,12 +19,12 @@ RUN pip install --upgrade pip && \
 FROM python:3.13-alpine
 
 LABEL maintainer="hisu87"
-LABEL version="3.1.0"
+LABEL version="3.2.0"
 LABEL description="Self-hosted Spotify downloader"
 
 LABEL org.opencontainers.image.title="Downtify" \
       org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker" \
-      org.opencontainers.image.version="3.1.0" \
+      org.opencontainers.image.version="3.2.0" \
       org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
       org.opencontainers.image.url="https://github.com/henriquesebastiao/downtify" \
       org.opencontainers.image.source="https://github.com/hisu87/downtify" \
@@ -46,7 +55,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY main.py entrypoint.sh ./
 COPY downtify ./downtify
-COPY frontend/dist ./frontend/dist
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 RUN sed -i 's/\r$//g' entrypoint.sh && \
     chmod +x entrypoint.sh

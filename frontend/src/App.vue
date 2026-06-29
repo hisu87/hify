@@ -62,8 +62,12 @@ const player = usePlayer()
 const layout = useLayout()
 useDynamicTheme()
 
-const toggleLyrics = () => { isLyricsOpen.value = !isLyricsOpen.value }
-const forceOpenLyrics = () => { isLyricsOpen.value = true }
+const toggleLyrics = () => {
+  isLyricsOpen.value = !isLyricsOpen.value
+}
+const forceOpenLyrics = () => {
+  isLyricsOpen.value = true
+}
 
 onBeforeMount(() => {
   themeMgr.setLightAlias('downtify-light')

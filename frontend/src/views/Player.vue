@@ -1,7 +1,9 @@
 <template>
   <div class="min-h-screen flex flex-col w-full relative pb-10">
     <!-- Header -->
-    <div class="px-4 py-8 sm:px-6 xl:px-12 shrink-0 flex items-center justify-between">
+    <div
+      class="px-4 py-8 sm:px-6 xl:px-12 shrink-0 flex items-center justify-between"
+    >
       <div>
         <h1 class="text-3xl font-bold tracking-tight text-white drop-shadow-md">
           {{ t('player.title') }}
@@ -36,7 +38,10 @@
     </div>
 
     <!-- Skeleton -->
-    <div v-else-if="loading && !player.currentTrack.value" class="flex-1 flex items-center justify-center">
+    <div
+      v-else-if="loading && !player.currentTrack.value"
+      class="flex-1 flex items-center justify-center"
+    >
       <div class="space-y-4 w-full max-w-md">
         <div class="skeleton h-96 w-full rounded-[2.5rem] bg-white/10" />
         <div class="skeleton h-8 w-3/4 rounded-xl bg-white/10" />
@@ -45,10 +50,14 @@
     </div>
 
     <!-- Player + queue/lyrics -->
-    <div v-else class="flex-1 grid gap-10 lg:grid-cols-2 px-4 pb-8 sm:px-6 xl:px-12 w-full max-w-[1920px] mx-auto min-h-0">
-      
+    <div
+      v-else
+      class="flex-1 grid gap-10 lg:grid-cols-2 px-4 pb-8 sm:px-6 xl:px-12 w-full max-w-[1920px] mx-auto min-h-0"
+    >
       <!-- Player Section (Left) -->
-      <section class="flex flex-col items-center xl:items-start justify-center text-center xl:text-left h-full">
+      <section
+        class="flex flex-col items-center xl:items-start justify-center text-center xl:text-left h-full"
+      >
         <!-- Massive Cover -->
         <div
           class="relative h-72 w-72 sm:h-80 sm:w-80 xl:h-[28rem] xl:w-[28rem] rounded-[2.5rem] bg-black/20 text-white flex items-center justify-center overflow-hidden shadow-2xl ring-1 ring-white/10"
@@ -81,10 +90,14 @@
 
         <!-- Title / artist -->
         <div class="mt-12 w-full max-w-[28rem]">
-          <p class="text-3xl sm:text-4xl font-extrabold tracking-tight truncate text-white drop-shadow-lg">
+          <p
+            class="text-3xl sm:text-4xl font-extrabold tracking-tight truncate text-white drop-shadow-lg"
+          >
             {{ trackTitle }}
           </p>
-          <p class="text-lg sm:text-xl text-white/70 truncate mt-2 font-medium drop-shadow-md">
+          <p
+            class="text-lg sm:text-xl text-white/70 truncate mt-2 font-medium drop-shadow-md"
+          >
             {{ trackArtist }}
           </p>
         </div>
@@ -115,12 +128,21 @@
         </div>
 
         <!-- Transport -->
-        <div class="mt-8 flex items-center justify-center xl:justify-start gap-5 xl:gap-8 w-full max-w-[28rem]">
+        <div
+          class="mt-8 flex items-center justify-center xl:justify-start gap-5 xl:gap-8 w-full max-w-[28rem]"
+        >
           <button
             class="icon-btn-large"
-            :class="{ 'text-primary drop-shadow-[0_0_12px_rgba(26,208,92,0.5)]': player.shuffle.value }"
+            :class="{
+              'text-primary drop-shadow-[0_0_12px_rgba(26,208,92,0.5)]':
+                player.shuffle.value,
+            }"
             @click="player.toggleShuffle()"
-            :title="player.shuffle.value ? t('player.shuffleOn') : t('player.shuffleOff')"
+            :title="
+              player.shuffle.value
+                ? t('player.shuffleOn')
+                : t('player.shuffleOff')
+            "
           >
             <Icon icon="clarity:shuffle-line" class="h-6 w-6" />
           </button>
@@ -130,16 +152,25 @@
             :title="t('player.previous')"
             :disabled="files.length === 0"
           >
-            <Icon icon="clarity:step-forward-2-line" class="h-8 w-8 -scale-x-100" />
+            <Icon
+              icon="clarity:step-forward-2-line"
+              class="h-8 w-8 -scale-x-100"
+            />
           </button>
           <button
             class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50"
             @click="player.toggle()"
             :disabled="files.length === 0"
-            :title="player.isPlaying.value ? t('player.pause') : t('player.play')"
+            :title="
+              player.isPlaying.value ? t('player.pause') : t('player.play')
+            "
           >
             <Icon
-              :icon="player.isPlaying.value ? 'clarity:pause-solid' : 'clarity:play-solid'"
+              :icon="
+                player.isPlaying.value
+                  ? 'clarity:pause-solid'
+                  : 'clarity:play-solid'
+              "
               class="h-10 w-10"
             />
           </button>
@@ -153,7 +184,10 @@
           </button>
           <button
             class="icon-btn-large relative"
-            :class="{ 'text-primary drop-shadow-[0_0_12px_rgba(26,208,92,0.5)]': player.repeatMode.value !== 'off' }"
+            :class="{
+              'text-primary drop-shadow-[0_0_12px_rgba(26,208,92,0.5)]':
+                player.repeatMode.value !== 'off',
+            }"
             @click="player.cycleRepeat()"
             :title="repeatTitle"
           >
@@ -172,7 +206,9 @@
           <button
             class="icon-btn-large"
             @click="player.toggleMute()"
-            :title="player.isMuted.value ? t('player.unmute') : t('player.mute')"
+            :title="
+              player.isMuted.value ? t('player.unmute') : t('player.mute')
+            "
           >
             <Icon
               :icon="
@@ -199,20 +235,31 @@
       </section>
 
       <!-- Immersive Lyrics / Queue Section (Right) -->
-      <aside class="flex flex-col h-[600px] lg:h-full w-full relative rounded-[2.5rem] overflow-hidden bg-black/10 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl">
-        
+      <aside
+        class="flex flex-col h-[600px] lg:h-full w-full relative rounded-[2.5rem] overflow-hidden bg-black/10 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl"
+      >
         <!-- Tab Selector -->
-        <div class="flex items-center justify-center gap-10 py-5 shrink-0 relative z-10 border-b border-white/10 bg-black/20">
+        <div
+          class="flex items-center justify-center gap-10 py-5 shrink-0 relative z-10 border-b border-white/10 bg-black/20"
+        >
           <button
             class="text-sm font-extrabold uppercase tracking-[0.2em] transition-all duration-300"
-            :class="activeTab === 'lyrics' ? 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] scale-105' : 'text-white/40 hover:text-white/80'"
+            :class="
+              activeTab === 'lyrics'
+                ? 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] scale-105'
+                : 'text-white/40 hover:text-white/80'
+            "
             @click="activeTab = 'lyrics'"
           >
             Lyrics
           </button>
           <button
             class="text-sm font-extrabold uppercase tracking-[0.2em] transition-all duration-300"
-            :class="activeTab === 'queue' ? 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] scale-105' : 'text-white/40 hover:text-white/80'"
+            :class="
+              activeTab === 'queue'
+                ? 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] scale-105'
+                : 'text-white/40 hover:text-white/80'
+            "
             @click="activeTab = 'queue'"
           >
             {{ t('player.queue') }}
@@ -220,12 +267,18 @@
         </div>
 
         <!-- Tab: Lyrics -->
-        <div v-show="activeTab === 'lyrics'" class="flex-1 relative w-full h-full min-h-0 lyrics-container-large">
+        <div
+          v-show="activeTab === 'lyrics'"
+          class="flex-1 relative w-full h-full min-h-0 lyrics-container-large"
+        >
           <LyricsView inline />
         </div>
 
         <!-- Tab: Queue -->
-        <div v-show="activeTab === 'queue'" class="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 relative z-10 custom-scrollbar">
+        <div
+          v-show="activeTab === 'queue'"
+          class="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 relative z-10 custom-scrollbar"
+        >
           <ul v-if="files.length > 0" class="space-y-2">
             <li
               v-for="(file, idx) in files"
@@ -250,7 +303,9 @@
                   @error="markCoverFailed(file)"
                 />
                 <span
-                  v-if="idx === player.currentIndex.value && player.isPlaying.value"
+                  v-if="
+                    idx === player.currentIndex.value && player.isPlaying.value
+                  "
                   class="relative equalizer h-5"
                   aria-hidden="true"
                 >
@@ -266,14 +321,18 @@
                 <p class="text-lg truncate font-bold text-white drop-shadow-md">
                   {{ trackInfo(file).title }}
                 </p>
-                <p class="text-sm truncate text-white/60 font-medium drop-shadow-sm mt-0.5">
+                <p
+                  class="text-sm truncate text-white/60 font-medium drop-shadow-sm mt-0.5"
+                >
                   {{ trackInfo(file).artist || t('common.unknownArtist') }}
                 </p>
               </div>
             </li>
           </ul>
           <div v-else class="text-center py-24">
-            <p class="text-white/50 text-xl font-semibold">{{ t('player.empty') }}</p>
+            <p class="text-white/50 text-xl font-semibold">
+              {{ t('player.empty') }}
+            </p>
           </div>
         </div>
       </aside>
@@ -413,7 +472,7 @@ const openFullscreenLyrics = () => {
   height: 6px;
   border-radius: 9999px;
   outline: none;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .player-range-large::-webkit-slider-thumb {
   -webkit-appearance: none;

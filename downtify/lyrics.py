@@ -20,9 +20,15 @@ else:
     CACHE_DB_PATH = './data/lyrics_cache.db'
 
 import re
+import xml.etree.ElementTree as ET
 
 import httpx
 import syncedlyrics
+from mutagen.flac import FLAC
+from mutagen.id3 import ID3
+from mutagen.mp4 import MP4
+from mutagen.oggopus import OggOpus
+from mutagen.oggvorbis import OggVorbis
 
 from downtify.lyrics_db import cache_lyrics, get_cached_lyrics
 from downtify.smart_matching import is_metadata_match
@@ -165,10 +171,10 @@ LRC_LINE_RE = re.compile(r'^\[(\d+):(\d+\.\d+|\d+)\](.*)$')
 LRC_WORD_RE = re.compile(r'<(\d+):(\d+\.\d+|\d+)>([^<]*)')
 
 
-def parse_enhanced_lrc(lrc_str: str) -> list[NormalizedLine]:
+def parse_enhanced_lrc(lrc_str: str) -> list[NormalizedLine]:  # noqa: PLR0914
     lines = []
-    for line in lrc_str.split('\n'):
-        line = line.strip()
+    for raw_line in lrc_str.split('\n'):
+        line = raw_line.strip()
         if not line:
             continue
         line_match = LRC_LINE_RE.match(line)
@@ -236,9 +242,6 @@ def parse_enhanced_lrc(lrc_str: str) -> list[NormalizedLine]:
     return lines
 
 
-import xml.etree.ElementTree as ET
-
-
 def parse_time(time_str: str) -> float:
     parts = time_str.split(':')
     total = 0.0
@@ -304,12 +307,6 @@ def parse_amll_ttml(xml_str: str) -> list[NormalizedLine]:
 def extract_raw_id3_lyrics(path: Path) -> Optional[str]:
     """Extract embedded plain lyrics from audio tag without external libraries (using mutagen)."""
     try:
-        from mutagen.flac import FLAC
-        from mutagen.id3 import ID3
-        from mutagen.mp4 import MP4
-        from mutagen.oggopus import OggOpus
-        from mutagen.oggvorbis import OggVorbis
-
         suffix = path.suffix.lower().lstrip('.')
         if suffix == 'mp3':
             tag = ID3(str(path))
@@ -453,7 +450,7 @@ class LyricsResolver:
                         if raw_payload.get('duration')
                         else 0,
                     }
-                elif provider.name in ('netease', 'musixmatch'):
+                elif provider.name in {'netease', 'musixmatch'}:
                     lrc_str = raw_payload.get('lrc', '')
                     ti_match = re.search(r'\[ti:(.*?)\]', lrc_str)
                     ar_match = re.search(r'\[ar:(.*?)\]', lrc_str)
@@ -478,7 +475,7 @@ class LyricsResolver:
                             'granularity': getattr(
                                 result, 'granularity', result.sync_level
                             ),
-                            'lines': [l.__dict__ for l in result.lines],
+                            'lines': [line_ast.__dict__ for line_ast in result.lines],
                         }
                         for line in payload['lines']:
                             line['lead'] = [t.__dict__ for t in line['lead']]
@@ -502,7 +499,7 @@ class LyricsResolver:
                         'provider_name': ast.provider_name,
                         'sync_level': ast.sync_level,
                         'granularity': 'syllable',
-                        'lines': [l.__dict__ for l in ast.lines],
+                        'lines': [line_ast.__dict__ for line_ast in ast.lines],
                     }
                     for line in payload['lines']:
                         line['lead'] = [t.__dict__ for t in line['lead']]
@@ -520,7 +517,7 @@ class LyricsResolver:
                     'provider_name': ast.provider_name,
                     'sync_level': ast.sync_level,
                     'granularity': 'word',
-                    'lines': [l.__dict__ for l in ast.lines],
+                    'lines': [line_ast.__dict__ for line_ast in ast.lines],
                 }
                 for line in payload['lines']:
                     line['lead'] = [t.__dict__ for t in line['lead']]
@@ -538,7 +535,7 @@ class LyricsResolver:
                     'provider_name': ast.provider_name,
                     'sync_level': ast.sync_level,
                     'granularity': 'line',
-                    'lines': [l.__dict__ for l in ast.lines],
+                    'lines': [line_ast.__dict__ for line_ast in ast.lines],
                 }
                 for line in payload['lines']:
                     line['lead'] = [t.__dict__ for t in line['lead']]
@@ -556,7 +553,7 @@ class LyricsResolver:
                     'provider_name': ast.provider_name,
                     'sync_level': ast.sync_level,
                     'granularity': 'line',
-                    'lines': [l.__dict__ for l in ast.lines],
+                    'lines': [line_ast.__dict__ for line_ast in ast.lines],
                 }
                 for line in payload['lines']:
                     line['lead'] = [t.__dict__ for t in line['lead']]

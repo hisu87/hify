@@ -16,10 +16,14 @@ const history = ref([])
 const currentTrack = ref(null)
 
 const isAutomix = ref(localStorage.getItem('downtify-automix') === 'true')
-const crossfadeDuration = ref(parseInt(localStorage.getItem('downtify-crossfade')) || 0)
+const crossfadeDuration = ref(
+  parseInt(localStorage.getItem('downtify-crossfade')) || 0
+)
 
 watch(isAutomix, (val) => localStorage.setItem('downtify-automix', String(val)))
-watch(crossfadeDuration, (val) => localStorage.setItem('downtify-crossfade', String(val)))
+watch(crossfadeDuration, (val) =>
+  localStorage.setItem('downtify-crossfade', String(val))
+)
 
 let deckA = new Audio()
 let deckB = new Audio()
@@ -191,7 +195,7 @@ function _playTrack(track, isGoingBack = false) {
 function playAt(index) {
   if (index < 0 || index >= playlist.value.length) return
   abortActiveFadeJob()
-  
+
   currentIndex.value = index
   if (shuffle.value) {
     if (shuffleOrder.length !== playlist.value.length) buildShuffleOrder()
@@ -213,7 +217,7 @@ function play() {
     next()
     return
   }
-  
+
   if (activeFadeJob) {
     // Resume fade
     activeDeck.play().catch(() => {})
@@ -286,13 +290,16 @@ function toggleMute() {
 
 function nextIndex() {
   if (playlist.value.length === 0) return -1
-  
+
   if (isAutomix.value && currentTrack.value) {
-    const candidates = playlist.value.map((t, idx) => ({ t, idx })).filter(x => 
-      x.idx !== currentIndex.value && 
-      ( (x.t.artist && x.t.artist === currentTrack.value.artist) || 
-        (x.t.genre && x.t.genre === currentTrack.value.genre) )
-    )
+    const candidates = playlist.value
+      .map((t, idx) => ({ t, idx }))
+      .filter(
+        (x) =>
+          x.idx !== currentIndex.value &&
+          ((x.t.artist && x.t.artist === currentTrack.value.artist) ||
+            (x.t.genre && x.t.genre === currentTrack.value.genre))
+      )
     if (candidates.length > 0) {
       const pick = candidates[Math.floor(Math.random() * candidates.length)]
       return pick.idx
@@ -383,7 +390,9 @@ function addToQueue(fileOrTrack) {
   userQueue.value.push(track)
   if (shuffle.value) {
     const newIdx = userQueue.value.length - 1
-    const insertPos = Math.floor(Math.random() * (shuffledQueueOrder.length + 1))
+    const insertPos = Math.floor(
+      Math.random() * (shuffledQueueOrder.length + 1)
+    )
     shuffledQueueOrder.splice(insertPos, 0, newIdx)
   }
 }
@@ -456,12 +465,19 @@ function toggleShuffle() {
 function updateTime() {
   if (activeDeck && isPlaying.value) {
     currentTime.value = activeDeck.currentTime
-    
+
     const effectiveCrossfade = isAutomix.value ? 6.0 : crossfadeDuration.value
     const timeLeft = activeDeck.duration - activeDeck.currentTime
-    const triggerTime = isAutomix.value ? (effectiveCrossfade + 2.0) : effectiveCrossfade
+    const triggerTime = isAutomix.value
+      ? effectiveCrossfade + 2.0
+      : effectiveCrossfade
 
-    if (effectiveCrossfade > 0 && timeLeft > 0 && timeLeft <= triggerTime && !activeFadeJob) {
+    if (
+      effectiveCrossfade > 0 &&
+      timeLeft > 0 &&
+      timeLeft <= triggerTime &&
+      !activeFadeJob
+    ) {
       startCrossfade(effectiveCrossfade)
     }
 
@@ -487,7 +503,7 @@ function startCrossfade(durationSec) {
     }
   } else {
     const nIdx = nextIndex()
-    if (nIdx < 0) return 
+    if (nIdx < 0) return
     currentIndex.value = nIdx
     trackToPlay = playlist.value[nIdx]
   }
@@ -495,12 +511,12 @@ function startCrossfade(durationSec) {
   nextTrackObjForFade = trackToPlay
   standbyDeck.src = trackToPlay.url
   standbyDeck.volume = 0
-  
+
   if (useAutomixOffset) {
     safeSeekAndPlay(standbyDeck, 2.5)
   } else {
     standbyDeck.currentTime = 0
-    standbyDeck.play().catch(()=>{})
+    standbyDeck.play().catch(() => {})
   }
 
   const steps = 50
@@ -511,7 +527,7 @@ function startCrossfade(durationSec) {
     steps,
     currentStep: 0,
     targetVol,
-    durationSec
+    durationSec,
   }
 
   runFadeInterval(stepTime)
@@ -519,15 +535,18 @@ function startCrossfade(durationSec) {
 
 function runFadeInterval(stepTime) {
   fadeIntervalId = setInterval(() => {
-    if (!isPlaying.value) return 
-    
+    if (!isPlaying.value) return
+
     activeFadeJob.currentStep++
     const t = activeFadeJob.currentStep / activeFadeJob.steps
-    
+
     // Logarithmic (quadratic) curve for natural human hearing perception
     const volA = Math.max(0, activeFadeJob.targetVol * Math.pow(1 - t, 2))
-    const volB = Math.min(activeFadeJob.targetVol, activeFadeJob.targetVol * Math.pow(t, 2))
-    
+    const volB = Math.min(
+      activeFadeJob.targetVol,
+      activeFadeJob.targetVol * Math.pow(t, 2)
+    )
+
     activeDeck.volume = volA
     standbyDeck.volume = volB
 
@@ -540,8 +559,8 @@ function runFadeInterval(stepTime) {
 
 function completeHandoff() {
   activeDeck.pause()
-  activeDeck.volume = isMuted.value ? 0 : volume.value 
-  
+  activeDeck.volume = isMuted.value ? 0 : volume.value
+
   const temp = activeDeck
   activeDeck = standbyDeck
   standbyDeck = temp
@@ -553,7 +572,7 @@ function completeHandoff() {
   currentTrack.value = nextTrackObjForFade
   duration.value = isFinite(activeDeck.duration) ? activeDeck.duration : 0
   activeFadeJob = null
-  
+
   updateMediaSession()
 }
 
@@ -657,6 +676,6 @@ export function usePlayer() {
     toggleShuffle,
     getAudio,
     getShufflePos: () => shufflePos,
-    getShuffleOrder: () => shuffleOrder
+    getShuffleOrder: () => shuffleOrder,
   }
 }

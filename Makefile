@@ -1,6 +1,6 @@
 #!make
 
-DOWNTIFY_VERSION := 3.1.0
+DOWNTIFY_VERSION := 3.2.0
 TARGET := hisu87/downtify
 
 all: build latest

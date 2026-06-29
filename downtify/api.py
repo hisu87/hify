@@ -185,7 +185,7 @@ async def get_lyrics_endpoint(id: str):
 
 
 @router.get('/api/v1/lyrics/search')
-async def search_lyrics_endpoint(
+async def search_lyrics_endpoint(  # noqa: PLR0913
     title: str = '',
     artist: str = '',
     album: str = '',
@@ -203,7 +203,7 @@ async def search_lyrics_endpoint(
     _INFLIGHT_RESOLVES[key] = fut
 
     try:
-        from main import DOWNLOAD_DIR
+        from main import DOWNLOAD_DIR  # noqa: PLC0415
 
         safe_path = None
         if file:

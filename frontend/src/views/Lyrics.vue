@@ -1,7 +1,9 @@
 <template>
   <div class="min-h-screen flex flex-col w-full relative">
     <!-- Header -->
-    <div class="px-4 py-8 sm:px-6 xl:px-12 shrink-0 flex items-center justify-between z-10 relative">
+    <div
+      class="px-4 py-8 sm:px-6 xl:px-12 shrink-0 flex items-center justify-between z-10 relative"
+    >
       <button
         class="icon-btn-large flex items-center justify-center bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full w-12 h-12 text-white"
         @click="router.back()"
@@ -17,7 +19,8 @@
           {{ player.currentTrack.value?.artist || '' }}
         </p>
       </div>
-      <div class="w-12 h-12"></div> <!-- Spacer for centering -->
+      <div class="w-12 h-12"></div>
+      <!-- Spacer for centering -->
     </div>
 
     <!-- Lyrics Container -->
