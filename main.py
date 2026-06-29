@@ -241,18 +241,20 @@ def build_app() -> FastAPI:
     )
 
     @app.exception_handler(Exception)
-    async def global_shield_exception_handler(request: Request, exc: Exception):
+    async def global_shield_exception_handler(
+        request: Request, exc: Exception
+    ):
         """
         Lớp khiên tối thượng: Bất cứ lỗi 500 nào không được catch tường minh
         sẽ bị màng lọc này chặn lại, cấm tuyệt đối việc rò rỉ Stack Trace.
         """
         logger.error(
-            f"🚨 Unhandled Exception at {request.method} {request.url.path}",
-            exc_info=exc
+            f'🚨 Unhandled Exception at {request.method} {request.url.path}',
+            exc_info=exc,
         )
         return JSONResponse(
             status_code=500,
-            content={"detail": "An internal server error occurred."}
+            content={'detail': 'An internal server error occurred.'},
         )
 
     app.include_router(api.router)

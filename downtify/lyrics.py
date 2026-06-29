@@ -9,8 +9,8 @@ from __future__ import annotations
 import asyncio
 import os
 from dataclasses import dataclass
-from typing import Any, Optional, Protocol
 from pathlib import Path
+from typing import Any, Optional, Protocol
 
 from loguru import logger
 
@@ -54,7 +54,7 @@ class NormalizedLyrics:
     provider_name: str
     sync_level: str  # 'syllable', 'word', 'line', 'plain'
     lines: list[NormalizedLine]
-    granularity: str = ""
+    granularity: str = ''
 
     def to_sidecar_lrc(self) -> str:
         """Render to enhanced/kinetic LRC format for external players."""
@@ -406,7 +406,11 @@ class LyricsResolver:
                         sync_level=cached['sync_level'],
                         lines=lines,
                     )
-                    ast.granularity = getattr(ast, 'granularity', cached.get('granularity', ast.sync_level))
+                    ast.granularity = getattr(
+                        ast,
+                        'granularity',
+                        cached.get('granularity', ast.sync_level),
+                    )
                     return ast
 
         title = track.get('title') or track.get('name', '')
@@ -414,9 +418,13 @@ class LyricsResolver:
         isrc = track.get('isrc')
 
         amll = next((p for p in self.providers if p.name == 'amll'), None)
-        netease = next((p for p in self.providers if p.name == 'netease'), None)
+        netease = next(
+            (p for p in self.providers if p.name == 'netease'), None
+        )
         lrclib = next((p for p in self.providers if p.name == 'lrclib'), None)
-        musixmatch = next((p for p in self.providers if p.name == 'musixmatch'), None)
+        musixmatch = next(
+            (p for p in self.providers if p.name == 'musixmatch'), None
+        )
 
         limiter = self._get_limiter()
         has_network_error = False
@@ -449,8 +457,12 @@ class LyricsResolver:
                     lrc_str = raw_payload.get('lrc', '')
                     ti_match = re.search(r'\[ti:(.*?)\]', lrc_str)
                     ar_match = re.search(r'\[ar:(.*?)\]', lrc_str)
-                    cand_meta['title'] = ti_match.group(1) if ti_match else title
-                    cand_meta['artist'] = ar_match.group(1) if ar_match else artist
+                    cand_meta['title'] = (
+                        ti_match.group(1) if ti_match else title
+                    )
+                    cand_meta['artist'] = (
+                        ar_match.group(1) if ar_match else artist
+                    )
 
                 if not is_metadata_match(track, cand_meta):
                     return None
@@ -463,7 +475,9 @@ class LyricsResolver:
                             'isrc': result.isrc,
                             'provider_name': result.provider_name,
                             'sync_level': result.sync_level,
-                            'granularity': getattr(result, 'granularity', result.sync_level),
+                            'granularity': getattr(
+                                result, 'granularity', result.sync_level
+                            ),
                             'lines': [l.__dict__ for l in result.lines],
                         }
                         for line in payload['lines']:
@@ -483,11 +497,15 @@ class LyricsResolver:
                 ast.granularity = 'syllable'
                 if track_id:
                     payload = {
-                        'status': 'OK', 'isrc': ast.isrc, 'provider_name': ast.provider_name,
-                        'sync_level': ast.sync_level, 'granularity': 'syllable',
-                        'lines': [l.__dict__ for l in ast.lines]
+                        'status': 'OK',
+                        'isrc': ast.isrc,
+                        'provider_name': ast.provider_name,
+                        'sync_level': ast.sync_level,
+                        'granularity': 'syllable',
+                        'lines': [l.__dict__ for l in ast.lines],
                     }
-                    for line in payload['lines']: line['lead'] = [t.__dict__ for t in line['lead']]
+                    for line in payload['lines']:
+                        line['lead'] = [t.__dict__ for t in line['lead']]
                     await cache_lyrics(track_id, payload)
                 return ast
 
@@ -497,11 +515,15 @@ class LyricsResolver:
             ast.granularity = 'word'
             if track_id:
                 payload = {
-                    'status': 'OK', 'isrc': ast.isrc, 'provider_name': ast.provider_name,
-                    'sync_level': ast.sync_level, 'granularity': 'word',
-                    'lines': [l.__dict__ for l in ast.lines]
+                    'status': 'OK',
+                    'isrc': ast.isrc,
+                    'provider_name': ast.provider_name,
+                    'sync_level': ast.sync_level,
+                    'granularity': 'word',
+                    'lines': [l.__dict__ for l in ast.lines],
                 }
-                for line in payload['lines']: line['lead'] = [t.__dict__ for t in line['lead']]
+                for line in payload['lines']:
+                    line['lead'] = [t.__dict__ for t in line['lead']]
                 await cache_lyrics(track_id, payload)
             return ast
 
@@ -511,11 +533,15 @@ class LyricsResolver:
             ast.granularity = 'line'
             if track_id:
                 payload = {
-                    'status': 'OK', 'isrc': ast.isrc, 'provider_name': ast.provider_name,
-                    'sync_level': ast.sync_level, 'granularity': 'line',
-                    'lines': [l.__dict__ for l in ast.lines]
+                    'status': 'OK',
+                    'isrc': ast.isrc,
+                    'provider_name': ast.provider_name,
+                    'sync_level': ast.sync_level,
+                    'granularity': 'line',
+                    'lines': [l.__dict__ for l in ast.lines],
                 }
-                for line in payload['lines']: line['lead'] = [t.__dict__ for t in line['lead']]
+                for line in payload['lines']:
+                    line['lead'] = [t.__dict__ for t in line['lead']]
                 await cache_lyrics(track_id, payload)
             return ast
 
@@ -525,11 +551,15 @@ class LyricsResolver:
             ast.granularity = 'line'
             if track_id:
                 payload = {
-                    'status': 'OK', 'isrc': ast.isrc, 'provider_name': ast.provider_name,
-                    'sync_level': ast.sync_level, 'granularity': 'line',
-                    'lines': [l.__dict__ for l in ast.lines]
+                    'status': 'OK',
+                    'isrc': ast.isrc,
+                    'provider_name': ast.provider_name,
+                    'sync_level': ast.sync_level,
+                    'granularity': 'line',
+                    'lines': [l.__dict__ for l in ast.lines],
                 }
-                for line in payload['lines']: line['lead'] = [t.__dict__ for t in line['lead']]
+                for line in payload['lines']:
+                    line['lead'] = [t.__dict__ for t in line['lead']]
                 await cache_lyrics(track_id, payload)
             return ast
 

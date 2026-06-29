@@ -2,17 +2,25 @@
   <div
     class="min-h-dvh overflow-x-hidden bg-transparent text-base-content relative z-0"
   >
-    <!-- Lucid Dynamic Background -->
-    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+    <!-- Lucid Dynamic Background (Gradient Bleed) -->
+    <div
+      class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none transition-colors duration-1000 ease-out"
+      style="
+        background: linear-gradient(
+          to bottom,
+          var(--dynamic-bg-light),
+          transparent
+        );
+      "
+    >
+      <!-- The Bleed Blob -->
       <div
-        class="absolute inset-[-10%] bg-cover bg-center transition-all duration-[1500ms] ease-out"
-        :style="{
-          backgroundImage: player.currentTrack.value?.cover
-            ? `url(${player.currentTrack.value.cover})`
-            : 'none',
-          filter: 'blur(60px) saturate(200%)',
-          transform: 'scale(1.15)',
-        }"
+        class="absolute top-1/2 left-1/2 w-3/4 h-3/4 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors duration-1000 ease-out"
+        style="
+          background-color: var(--dynamic-bg-dark);
+          filter: blur(150px);
+          transform: translate(-50%, -50%) scale(1.2);
+        "
       ></div>
       <div
         class="absolute inset-0 bg-base-300/40 dark:bg-black/60 transition-colors duration-500"

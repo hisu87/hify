@@ -5,7 +5,32 @@
 @tailwind components;
 @tailwind utilities;
 
+@property --dynamic-bg-light {
+  syntax: '<color>';
+  initial-value: transparent;
+  inherits: true;
+}
+
+@property --dynamic-bg-dark {
+  syntax: '<color>';
+  initial-value: transparent;
+  inherits: true;
+}
+
+@property --dynamic-highlight {
+  syntax: '<color>';
+  initial-value: transparent;
+  inherits: true;
+}
+
 @layer base {
+  :root {
+    transition:
+      --dynamic-bg-light 1s ease-out,
+      --dynamic-bg-dark 1s ease-out,
+      --dynamic-highlight 1s ease-out;
+  }
+
   html,
   body {
     @apply bg-base-300 text-base-content antialiased;

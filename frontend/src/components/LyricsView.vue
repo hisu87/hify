@@ -48,7 +48,10 @@
         <div
           v-else
           class="lyrics-list"
-          :style="{ transform: `translate3d(0, ${scrollY}px, 0)`, fontFamily: `'${currentFont}', sans-serif` }"
+          :style="{
+            transform: `translate3d(0, ${scrollY}px, 0)`,
+            fontFamily: `'${currentFont}', sans-serif`,
+          }"
         >
           <!-- Top Spacer -->
           <div :style="{ height: topPad + topSpacerHeight + 'px' }"></div>
@@ -86,8 +89,27 @@
               {{ item.line.isInstrumental ? '• • •' : '♪' }}
             </span>
 
+            <!-- Lead Line (Line-level sync) -->
+            <div
+              v-if="
+                syncType === 'line' ||
+                (!item.line.lead?.length && !item.line.isInstrumental)
+              "
+              class="lead-line-text flex flex-wrap"
+              :class="[
+                getAlignClass(item.index),
+                {
+                  'is-active': item.index === activeLineIdx,
+                  'is-past': item.index < activeLineIdx,
+                },
+              ]"
+            >
+              {{ item.line.rawText }}
+            </div>
+
             <!-- Lead Words -->
             <div
+              v-else-if="item.line.lead?.length"
               class="lead-words flex flex-wrap"
               :class="getAlignClass(item.index)"
             >
@@ -96,12 +118,10 @@
                 :key="'lead-' + wi"
                 class="lyric-word"
                 :data-has-space="word.isTrailingSpace"
+                :data-text="word.text"
                 :ref="(el) => registerWordEl(item.index, wi, el, false)"
               >
-                <span class="word-base">{{ word.text }}</span>
-                <span class="word-hl-wrapper">
-                  <span class="word-hl">{{ word.text }}</span>
-                </span>
+                {{ word.text }}
               </span>
             </div>
 
@@ -116,12 +136,10 @@
                 :key="'bg-' + wi"
                 class="lyric-word"
                 :data-has-space="word.isTrailingSpace"
+                :data-text="word.text"
                 :ref="(el) => registerWordEl(item.index, wi, el, true)"
               >
-                <span class="word-base">{{ word.text }}</span>
-                <span class="word-hl-wrapper">
-                  <span class="word-hl">{{ word.text }}</span>
-                </span>
+                {{ word.text }}
               </span>
             </div>
           </div>
@@ -147,11 +165,26 @@ const emit = defineEmits(['close'])
 
 // ─── Fonts ────────────────────────────────────────────────────────────────────
 const LYRIC_FONTS = [
-  'Be Vietnam Pro', 'Inter', 'Plus Jakarta Sans', 'Lexend',
-  'Playfair Display', 'Lora', 'Bodoni Moda', 'Cinzel',
-  'Patrick Hand', 'Dancing Script', 'Pacifico', 'Caveat',
-  'Anton', 'Alfa Slab One', 'Bungee', 'Space Grotesk',
-  'Space Mono', 'Courier Prime', 'Comfortaa', 'Prata'
+  'Be Vietnam Pro',
+  'Inter',
+  'Plus Jakarta Sans',
+  'Lexend',
+  'Playfair Display',
+  'Lora',
+  'Bodoni Moda',
+  'Cinzel',
+  'Patrick Hand',
+  'Dancing Script',
+  'Pacifico',
+  'Caveat',
+  'Anton',
+  'Alfa Slab One',
+  'Bungee',
+  'Space Grotesk',
+  'Space Mono',
+  'Courier Prime',
+  'Comfortaa',
+  'Prata',
 ]
 
 const currentFont = ref('Inter')
@@ -163,7 +196,7 @@ function updateFontForTrack(track) {
   }
   const genre = (track.genre || '').toLowerCase()
   let validGroups = []
-  
+
   if (/(rap|hip-hop|hip hop|dance)/.test(genre)) {
     validGroups = [0, 3] // Groups 1 & 4
   } else if (/(r&b|soul|ballad)/.test(genre)) {
@@ -173,8 +206,9 @@ function updateFontForTrack(track) {
   } else {
     validGroups = [0, 1, 2, 3, 4]
   }
-  
-  const chosenGroup = validGroups[Math.floor(Math.random() * validGroups.length)]
+
+  const chosenGroup =
+    validGroups[Math.floor(Math.random() * validGroups.length)]
   const fontInGroup = Math.floor(Math.random() * 4)
   currentFont.value = LYRIC_FONTS[chosenGroup * 4 + fontInGroup]
 }
@@ -187,6 +221,7 @@ const currentTrack = computed(() => player.currentTrack.value)
 const loading = ref(false)
 const error = ref('')
 const parsedLyrics = ref([])
+const syncType = ref('word')
 
 // Scroll
 const scrollerEl = ref(null)
@@ -421,7 +456,7 @@ async function fetchLyrics() {
   _lastFetchId = reqId
 
   if (lyricsCache.has(key)) {
-    applyLyrics(lyricsCache.get(key).lines)
+    applyLyrics(lyricsCache.get(key))
     return
   }
   loading.value = true
@@ -483,12 +518,14 @@ async function doFetch(key) {
   }
 }
 
-function applyLyrics(lines) {
+function applyLyrics(ast) {
   loading.value = false
+  const lines = ast.lines || ast
   if (!Array.isArray(lines)) {
     error.value = 'Invalid lyrics format'
     return
   }
+  syncType.value = ast.sync_type || ast.syncType || ast.granularity || 'word'
 
   // Map snake_case from backend API to camelCase for frontend Animator
   const mappedLines = lines.map((line) => ({
@@ -672,8 +709,27 @@ function applyLyrics(lines) {
   width: 100%;
 }
 
+.lead-line-text {
+  font-size: clamp(1.6rem, 4.5vw, 3.75rem);
+  font-weight: 900;
+  letter-spacing: 0.05rem;
+  color: white;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+  width: 100%;
+}
+
+.lead-line-text.is-active {
+  opacity: 1;
+}
+
+.lead-line-text.is-past {
+  opacity: 0.7;
+}
+
 .lyric-word {
-  display: inline-grid;
+  position: relative;
+  display: inline-block;
   will-change: transform, opacity;
   transform: translate3d(0, 0, 0) scale(var(--word-scale, 1));
   margin-right: 0.1em;
@@ -684,39 +740,24 @@ function applyLyrics(lines) {
   font-size: clamp(1.6rem, 4.5vw, 3.75rem);
   font-weight: 900;
   letter-spacing: 0.05rem;
+  color: rgba(255, 255, 255, var(--base-opacity, 0.35)); /* Base color */
+  transition: opacity 0.2s;
+  white-space: pre;
 }
 
 .lyric-word[data-has-space='true'] {
   margin-right: 0.35em;
 }
 
-.word-base {
-  grid-column: 1;
-  grid-row: 1;
-  color: white;
-  white-space: pre;
-  opacity: 0.28;
-}
-
-.word-hl-wrapper {
-  grid-column: 1;
-  grid-row: 1;
-  display: inline-grid;
-  will-change: filter;
-  filter: drop-shadow(
-      0 0 var(--glow-blur, 0px) rgba(255, 255, 255, var(--glow-opacity, 0))
-    )
-    drop-shadow(
-      0 0 calc(var(--glow-blur, 0px) * 2.5)
-        rgba(255, 255, 255, calc(var(--glow-opacity, 0) * 0.5))
-    );
-}
-
-.word-hl {
-  grid-column: 1;
-  grid-row: 1;
-  white-space: pre;
-  color: white;
+.lyric-word::before {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--dynamic-highlight, white);
+  text-shadow: 0 0 calc(var(--glow-blur, 0px) * 1.5)
+    rgba(255, 255, 255, calc(var(--glow-opacity, 0) * 1.2));
+  opacity: var(--hl-opacity, 0.01);
   -webkit-mask-image: linear-gradient(
     90deg,
     black calc(var(--fill-pct, 0%) - 18%),
@@ -729,7 +770,6 @@ function applyLyrics(lines) {
     transparent var(--fill-pct, 0%),
     transparent 100%
   );
-  opacity: 0.01;
   will-change:
     opacity,
     mask-image,

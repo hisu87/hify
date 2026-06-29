@@ -137,4 +137,9 @@ def test_effective_providers_defaults_to_enabled_when_key_missing():
 
 def test_effective_providers_empty_list_when_no_providers():
     settings = {'download_lyrics': True, 'lyrics_providers': []}
-    assert _effective_lyrics_providers(settings) == ['lrclib', 'netease', 'amll', 'musixmatch']
+    assert _effective_lyrics_providers(settings) == [
+        'lrclib',
+        'netease',
+        'amll',
+        'musixmatch',
+    ]

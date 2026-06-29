@@ -58,9 +58,7 @@ export class LyricsAnimator {
   registerWord(lineIdx, wordIdx, el, isBg = false) {
     if (!el) return
     const key = `${lineIdx}-${isBg ? 'bg' : 'lead'}-${wordIdx}`
-    const hlEl = el.querySelector('.word-hl')
-    const baseEl = el.querySelector('.word-base')
-    this._wordEls.set(key, { word: el, hl: hlEl, base: baseEl })
+    this._wordEls.set(key, { word: el })
     el.style.willChange = 'opacity, mask-image, transform' // GPU hint (Giai đoạn 4.3)
     el.style.backfaceVisibility = 'hidden'
     el.style.transform = 'translate3d(0, 0, 0)'
@@ -367,22 +365,11 @@ export class LyricsAnimator {
         setStyleIfChanged(wordEl, '--glow-blur', '0px', 0)
       }
 
-      if (hlEl) {
-        setStyleIfChanged(hlEl, '--fill-pct', `${fill.toFixed(1)}%`, 0.4)
-        setStyleIfChanged(hlEl, 'opacity', opacity.toFixed(3), 0.004)
-        setStyleIfChanged(
-          hlEl,
-          'webkitMaskImage',
-          fill >= 99.5 ? 'none' : '',
-          0
-        )
-        setStyleIfChanged(hlEl, 'maskImage', fill >= 99.5 ? 'none' : '', 0)
-      }
+      setStyleIfChanged(wordEl, '--fill-pct', `${fill.toFixed(1)}%`, 0.4)
+      setStyleIfChanged(wordEl, '--hl-opacity', opacity.toFixed(3), 0.004)
 
-      if (baseEl) {
-        const baseOpacity = Math.max(0.12, opacity * 0.35)
-        setStyleIfChanged(baseEl, 'opacity', baseOpacity.toFixed(3), 0.004)
-      }
+      const baseOpacity = Math.max(0.12, opacity * 0.35)
+      setStyleIfChanged(wordEl, '--base-opacity', baseOpacity.toFixed(3), 0.004)
     }
   }
 

@@ -47,7 +47,14 @@ function search(query) {
   return API.get('/api/songs/search', { params: { query } })
 }
 
-function searchTrackLyrics(title, artist, album = '', duration_ms = 0, file = '', track_id = '') {
+function searchTrackLyrics(
+  title,
+  artist,
+  album = '',
+  duration_ms = 0,
+  file = '',
+  track_id = ''
+) {
   return API.get('/api/v1/lyrics/search', {
     params: { title, artist, album, duration_ms, file, track_id },
   }).then((res) => res.data)
