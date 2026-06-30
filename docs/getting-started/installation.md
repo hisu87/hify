@@ -19,7 +19,7 @@ docker run -d \
   -v /path/to/music:/downloads \
   -v hify_data:/data \
   --restart unless-stopped \
-  ghcr.io/henriquesebastiao/hify
+  ghcr.io/hisu87/hify
 ```
 
 Replace `/path/to/music` with the directory where you want your music saved.
@@ -45,7 +45,7 @@ docker run -d \
   -p 9090:8000 \           # host:container
   -v /path/to/music:/downloads \
   -v hify_data:/data \
-  ghcr.io/henriquesebastiao/hify
+  ghcr.io/hisu87/hify
 ```
 
 Then open **[http://localhost:9090](http://localhost:9090)**.
@@ -55,13 +55,13 @@ Then open **[http://localhost:9090](http://localhost:9090)**.
 Pull the latest image and recreate the container:
 
 ```bash
-docker pull ghcr.io/henriquesebastiao/hify
+docker pull ghcr.io/hisu87/hify
 docker stop hify && docker rm hify
 docker run -d --name hify -p 8000:8000 \
   -v /path/to/music:/downloads \
   -v hify_data:/data \
   --restart unless-stopped \
-  ghcr.io/henriquesebastiao/hify
+  ghcr.io/hisu87/hify
 ```
 
 Your music and settings are preserved in the volumes.

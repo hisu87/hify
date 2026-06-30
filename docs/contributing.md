@@ -8,7 +8,7 @@ Contributions are welcome — bug reports, feature requests, code and translatio
 
 ## Issues and feature requests
 
-Use the [GitHub issue tracker](https://github.com/henriquesebastiao/hify/issues). Before opening a new issue, search existing ones to avoid duplicates.
+Use the [GitHub issue tracker](https://github.com/hisu87/hify/issues). Before opening a new issue, search existing ones to avoid duplicates.
 
 For bug reports, include:
 
@@ -30,7 +30,7 @@ For bug reports, include:
 ### Clone and install
 
 ```bash
-git clone https://github.com/henriquesebastiao/hify.git
+git clone https://github.com/hisu87/hify.git
 cd hify
 
 # Python dependencies

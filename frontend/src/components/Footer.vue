@@ -2,7 +2,7 @@
   <footer class="mt-auto px-6 py-6 text-center text-sm text-base-content/60">
     <a
       class="font-semibold text-primary hover:underline"
-      href="https://github.com/henriquesebastiao/hify"
+      href="https://github.com/hisu87/hify"
       target="_blank"
       rel="noopener"
       >Hify</a

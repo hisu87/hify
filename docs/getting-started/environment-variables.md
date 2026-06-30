@@ -31,7 +31,7 @@ YouTube periodically challenges automated downloaders. These variables give you 
 ```yaml
 services:
   hify:
-    image: ghcr.io/henriquesebastiao/hify:latest
+    image: ghcr.io/hisu87/hify:latest
     ports:
       - '8000:8000'
     volumes:

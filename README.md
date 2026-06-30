@@ -1,5 +1,5 @@
 <h1 align="center">
-  <a href="https://github.com/henriquesebastiao/hify" target="_blank" rel="noopener noreferrer">
+  <a href="https://github.com/hisu87/hify" target="_blank" rel="noopener noreferrer">
     <picture>
       <img width="80" src="https://github.com/user-attachments/assets/628d4334-7326-446e-9f2a-4d3ab4fc95c3">
     </picture>
@@ -14,11 +14,11 @@
 
 <div align="center">
 
-[![Test](https://github.com/henriquesebastiao/hify/actions/workflows/test.yml/badge.svg)](https://github.com/henriquesebastiao/hify/actions/workflows/test.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/henriquesebastiao/hify?color=blue)](https://github.com/henriquesebastiao/hify/releases)
-[![GitHub License](https://img.shields.io/github/license/henriquesebastiao/hify?color=blue)](/LICENSE)
-[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/hify?color=blue)](https://hub.docker.com/r/henriquesebastiao/hify)
-[![Visitors](https://api.visitorbadge.io/api/visitors?path=henriquesebastiao%2Fhify&label=repository%20visits&countColor=%231182c3&style=flat)](https://github.com/henriquesebastiao/hify)
+[![Test](https://github.com/hisu87/hify/actions/workflows/test.yml/badge.svg)](https://github.com/hisu87/hify/actions/workflows/test.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/hisu87/hify?color=blue)](https://github.com/hisu87/hify/releases)
+[![GitHub License](https://img.shields.io/github/license/hisu87/hify?color=blue)](/LICENSE)
+[![Docker Pulls](https://img.shields.io/docker/pulls/hisu87/hify?color=blue)](https://hub.docker.com/r/hisu87/hify)
+[![Visitors](https://api.visitorbadge.io/api/visitors?path=hisu87%2Fhify&label=repository%20visits&countColor=%231182c3&style=flat)](https://github.com/hisu87/hify)
 
 </div>
 
@@ -58,7 +58,7 @@ It resolves track metadata directly from Spotify's public embed pages, finds the
 docker run -d -p 8000:8000 --name hify \
   -v /path/to/downloads:/downloads \
   -v hify_data:/data \
-  ghcr.io/henriquesebastiao/hify
+  ghcr.io/hisu87/hify
 ```
 
 Open [http://localhost:8000](http://localhost:8000), paste a Spotify link, and hit download.
@@ -71,7 +71,7 @@ Open [http://localhost:8000](http://localhost:8000), paste a Spotify link, and h
 services:
   hify:
     container_name: hify
-    image: ghcr.io/henriquesebastiao/hify:latest
+    image: ghcr.io/hisu87/hify:latest
     ports:
       - '8000:8000'
     volumes:
@@ -263,7 +263,7 @@ Pull requests with new translations are very welcome — just open a PR against 
 ## 🤝 Contributing
 
 Contributions, issues and feature requests are welcome!
-Check the [issues page](https://github.com/henriquesebastiao/hify/issues) or open a pull request.
+Check the [issues page](https://github.com/hisu87/hify/issues) or open a pull request.
 
 Before sending a pull request, please read [**CONTRIBUTING.md**](./CONTRIBUTING.md) — it covers local setup, the project's **coding and formatting standards** (Ruff for Python, Prettier for the frontend), testing requirements, commit conventions, and the PR checklist. All contributions are expected to follow those standards.
 
@@ -273,4 +273,4 @@ If Hify has been useful to you, consider leaving a ⭐ — it helps the project 
 
 ## 📄 License
 
-Licensed under the [GPL-3.0](https://github.com/henriquesebastiao/hify?tab=GPL-3.0-1-ov-file#readme) License.
+Licensed under the [GPL-3.0](https://github.com/hisu87/hify?tab=GPL-3.0-1-ov-file#readme) License.

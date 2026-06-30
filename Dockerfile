@@ -26,10 +26,10 @@ LABEL org.opencontainers.image.title="Hify" \
       org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker" \
       org.opencontainers.image.version="3.2.0" \
       org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
-      org.opencontainers.image.url="https://github.com/henriquesebastiao/hify" \
+      org.opencontainers.image.url="https://github.com/hisu87/hify" \
       org.opencontainers.image.source="https://github.com/hisu87/hify" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.documentation="https://github.com/henriquesebastiao/hify#readme" \
+      org.opencontainers.image.documentation="https://github.com/hisu87/hify#readme" \
       org.opencontainers.image.vendor="Henrique Sebastião" \
       org.opencontainers.image.base.name="python:3.13-alpine"
 

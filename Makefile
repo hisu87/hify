@@ -38,7 +38,7 @@ export:
 	uv export --no-hashes --no-dev -o requirements.txt
 
 changelog:
-	github_changelog_generator -u henriquesebastiao -p hify -o CHANGELOG --no-verbose
+	github_changelog_generator -u hisu87 -p hify -o CHANGELOG --no-verbose
 	@echo "Changelog generated at CHANGELOG"
 
 test:

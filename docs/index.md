@@ -21,15 +21,15 @@ Drop a Spotify link, get a tagged audio file. No account, no API key, no Premium
 <div class="hero__cta" markdown>
 
 [Get started](getting-started/installation.md){ .md-button .md-button--primary }
-[Source on GitHub](https://github.com/henriquesebastiao/hify){ .md-button }
+[Source on GitHub](https://github.com/hisu87/hify){ .md-button }
 
 </div>
 
 <div class="hero__shields" markdown>
 
-[![Release](https://img.shields.io/github/v/release/henriquesebastiao/hify?color=1AD05C&label=release)](https://github.com/henriquesebastiao/hify/releases)
-[![Docker Pulls](https://img.shields.io/docker/pulls/henriquesebastiao/hify?color=1AD05C)](https://hub.docker.com/r/henriquesebastiao/hify)
-[![License](https://img.shields.io/github/license/henriquesebastiao/hify?color=1AD05C)](https://github.com/henriquesebastiao/hify/blob/main/LICENSE)
+[![Release](https://img.shields.io/github/v/release/hisu87/hify?color=1AD05C&label=release)](https://github.com/hisu87/hify/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/hisu87/hify?color=1AD05C)](https://hub.docker.com/r/hisu87/hify)
+[![License](https://img.shields.io/github/license/hisu87/hify?color=1AD05C)](https://github.com/hisu87/hify/blob/main/LICENSE)
 
 </div>
 
@@ -119,7 +119,7 @@ Spotify's official API gates downloads behind a Premium subscription. Hify takes
 docker run -d -p 8000:8000 --name hify \
   -v /path/to/music:/downloads \
   -v hify_data:/data \
-  ghcr.io/henriquesebastiao/hify
+  ghcr.io/hisu87/hify
 ```
 
 Open [`localhost:8000`](http://localhost:8000), paste a link, hit download. Files land in `/path/to/music` with the tags already in place.

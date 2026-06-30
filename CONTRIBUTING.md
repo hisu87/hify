@@ -34,7 +34,7 @@ Be respectful, constructive, and patient. Reviews focus on code, not on the cont
 
 ## Ways to contribute
 
-- Fixing a bug from the [issues page](https://github.com/henriquesebastiao/hify/issues).
+- Fixing a bug from the [issues page](https://github.com/hisu87/hify/issues).
 - Adding a feature that has been discussed and accepted in an issue or discussion.
 - Improving documentation (`README.md`, in-repo docs, or the `zensical` site under `docs/`).
 - Adding or improving tests, especially around the Spotify embed scraping, yt-dlp pipeline, and tag embedding.
@@ -99,7 +99,7 @@ git clone https://github.com/<your-username>/hify.git
 cd hify
 
 # 2. Add the upstream remote so you can keep your fork up to date
-git remote add upstream https://github.com/henriquesebastiao/hify.git
+git remote add upstream https://github.com/hisu87/hify.git
 
 # 3. Install Python dependencies (creates .venv via uv)
 uv sync
@@ -296,7 +296,7 @@ Reviews are an exchange. Expect to iterate. Keep responses to review comments fo
 
 ## Reporting bugs and requesting features
 
-- Use the [issues page](https://github.com/henriquesebastiao/hify/issues) and pick the appropriate template.
+- Use the [issues page](https://github.com/hisu87/hify/issues) and pick the appropriate template.
 - For bugs, include: Hify version, deployment method (Docker vs. local), OS, exact reproduction steps, expected vs. actual behavior, and relevant log output. If a specific Spotify URL triggers the bug, include it — the project deliberately uses only public endpoints, so the URL is not sensitive.
 - For feature requests, describe the problem first, then the proposed solution. Features that require Spotify Premium credentials or the Spotify Web API will not be accepted.
 

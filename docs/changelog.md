@@ -4,127 +4,127 @@ icon: lucide/history
 
 # Changelog
 
-## [2.6.0](https://github.com/henriquesebastiao/hify/tree/2.6.0) — 2026-05-03
+## [2.6.0](https://github.com/hisu87/hify/tree/2.6.0) — 2026-05-03
 
 **Enhancements**
 
-- Organize by artist: save music into per-artist subfolders ([#151](https://github.com/henriquesebastiao/hify/pull/151))
-- Option to disable lyrics downloads ([#148](https://github.com/henriquesebastiao/hify/pull/148))
-- Fix download history clearing ([#150](https://github.com/henriquesebastiao/hify/pull/150))
+- Organize by artist: save music into per-artist subfolders ([#151](https://github.com/hisu87/hify/pull/151))
+- Option to disable lyrics downloads ([#148](https://github.com/hisu87/hify/pull/148))
+- Fix download history clearing ([#150](https://github.com/hisu87/hify/pull/150))
 
 **Bug fixes**
 
-- Download history persisting after clearing ([#146](https://github.com/henriquesebastiao/hify/issues/146))
-- Settings not persisting across restarts ([#142](https://github.com/henriquesebastiao/hify/issues/142))
+- Download history persisting after clearing ([#146](https://github.com/hisu87/hify/issues/146))
+- Settings not persisting across restarts ([#142](https://github.com/hisu87/hify/issues/142))
 
 ---
 
-## [2.5.0](https://github.com/henriquesebastiao/hify/tree/2.5.0) — 2026-05-02
+## [2.5.0](https://github.com/hisu87/hify/tree/2.5.0) — 2026-05-02
 
 **Enhancements**
 
-- Support for playlists with over 100 songs ([#147](https://github.com/henriquesebastiao/hify/pull/147))
+- Support for playlists with over 100 songs ([#147](https://github.com/hisu87/hify/pull/147))
 
 ---
 
-## [2.4.3](https://github.com/henriquesebastiao/hify/tree/2.4.3) — 2026-04-30
+## [2.4.3](https://github.com/hisu87/hify/tree/2.4.3) — 2026-04-30
 
 **Enhancements**
 
-- Persist settings to disk so they survive container restarts ([#143](https://github.com/henriquesebastiao/hify/pull/143))
+- Persist settings to disk so they survive container restarts ([#143](https://github.com/hisu87/hify/pull/143))
 
 ---
 
-## [2.4.2](https://github.com/henriquesebastiao/hify/tree/2.4.2) — 2026-04-30
+## [2.4.2](https://github.com/hisu87/hify/tree/2.4.2) — 2026-04-30
 
 **Enhancements**
 
-- Structured logging with loguru ([#141](https://github.com/henriquesebastiao/hify/pull/141))
+- Structured logging with loguru ([#141](https://github.com/hisu87/hify/pull/141))
 
 ---
 
-## [2.4.1](https://github.com/henriquesebastiao/hify/tree/2.4.1) — 2026-04-29
+## [2.4.1](https://github.com/hisu87/hify/tree/2.4.1) — 2026-04-29
 
 **Enhancements**
 
-- Move SQLite database from `/downloads` to `/data` — a separate named volume ([#140](https://github.com/henriquesebastiao/hify/pull/140))
+- Move SQLite database from `/downloads` to `/data` — a separate named volume ([#140](https://github.com/hisu87/hify/pull/140))
 
 ---
 
-## [2.4.0](https://github.com/henriquesebastiao/hify/tree/2.4.0) — 2026-04-29
+## [2.4.0](https://github.com/hisu87/hify/tree/2.4.0) — 2026-04-29
 
-[Full changelog](https://github.com/henriquesebastiao/hify/compare/2.3.0...2.4.0)
+[Full changelog](https://github.com/hisu87/hify/compare/2.3.0...2.4.0)
 
 ---
 
-## [2.3.0](https://github.com/henriquesebastiao/hify/tree/2.3.0) — 2026-04-28
+## [2.3.0](https://github.com/hisu87/hify/tree/2.3.0) — 2026-04-28
 
 **Enhancements**
 
-- Settings toggle to enable/disable M3U generation; Playlist Monitor integration ([#127](https://github.com/henriquesebastiao/hify/pull/127))
+- Settings toggle to enable/disable M3U generation; Playlist Monitor integration ([#127](https://github.com/hisu87/hify/pull/127))
 
 ---
 
-## [2.2.0](https://github.com/henriquesebastiao/hify/tree/2.2.0) — 2026-04-28
+## [2.2.0](https://github.com/hisu87/hify/tree/2.2.0) — 2026-04-28
 
 **Enhancements**
 
-- Automatic `EXTM3U` playlist file generation for Spotify playlists ([#126](https://github.com/henriquesebastiao/hify/pull/126))
+- Automatic `EXTM3U` playlist file generation for Spotify playlists ([#126](https://github.com/hisu87/hify/pull/126))
 
 ---
 
-## [2.1.1](https://github.com/henriquesebastiao/hify/tree/2.1.1) — 2026-04-28
+## [2.1.1](https://github.com/hisu87/hify/tree/2.1.1) — 2026-04-28
 
 **Bug fixes**
 
-- Album details (year, album cover) missing from embedded metadata ([#125](https://github.com/henriquesebastiao/hify/issues/125))
+- Album details (year, album cover) missing from embedded metadata ([#125](https://github.com/hisu87/hify/issues/125))
 
 ---
 
-## [2.1.0](https://github.com/henriquesebastiao/hify/tree/2.1.0) — 2026-04-28
+## [2.1.0](https://github.com/hisu87/hify/tree/2.1.0) — 2026-04-28
 
 **Enhancements**
 
-- Rewrite: replace Spotify Web API (spotdl/spotipy) with public embed scraping — no credentials or Premium required ([#124](https://github.com/henriquesebastiao/hify/pull/124))
+- Rewrite: replace Spotify Web API (spotdl/spotipy) with public embed scraping — no credentials or Premium required ([#124](https://github.com/hisu87/hify/pull/124))
 - Configurable output bitrate
 - Playlist Monitor (watch playlists and auto-download new tracks)
 - Lyrics via lrclib
 
 **Bug fixes**
 
-- Spotify direct links returning wrong results ([#104](https://github.com/henriquesebastiao/hify/issues/104))
+- Spotify direct links returning wrong results ([#104](https://github.com/hisu87/hify/issues/104))
 
 ---
 
-## [2.0.0](https://github.com/henriquesebastiao/hify/tree/2.0.0) — 2026-04-23
+## [2.0.0](https://github.com/hisu87/hify/tree/2.0.0) — 2026-04-23
 
-[Full changelog](https://github.com/henriquesebastiao/hify/compare/1.1.4...2.0.0)
+[Full changelog](https://github.com/hisu87/hify/compare/1.1.4...2.0.0)
 
 ---
 
-## [1.1.4](https://github.com/henriquesebastiao/hify/tree/1.1.4) — 2026-02-19
+## [1.1.4](https://github.com/hisu87/hify/tree/1.1.4) — 2026-02-19
 
 **Bug fixes**
 
-- Search engine not returning results ([#102](https://github.com/henriquesebastiao/hify/issues/102))
-- HTTP 500 errors with the Spotify API ([#97](https://github.com/henriquesebastiao/hify/issues/97))
+- Search engine not returning results ([#102](https://github.com/hisu87/hify/issues/102))
+- HTTP 500 errors with the Spotify API ([#97](https://github.com/hisu87/hify/issues/97))
 
 ---
 
-## [1.1.3](https://github.com/henriquesebastiao/hify/tree/1.1.3) — 2026-02-18
+## [1.1.3](https://github.com/hisu87/hify/tree/1.1.3) — 2026-02-18
 
 **Bug fixes**
 
-- Updated spotDL to reflect changes in the Spotify API ([#100](https://github.com/henriquesebastiao/hify/pull/100))
+- Updated spotDL to reflect changes in the Spotify API ([#100](https://github.com/hisu87/hify/pull/100))
 
 ---
 
-## [1.1.1](https://github.com/henriquesebastiao/hify/tree/1.1.1) — 2025-10-28
+## [1.1.1](https://github.com/hisu87/hify/tree/1.1.1) — 2025-10-28
 
 **Enhancements**
 
-- yt-dlp updated to 2025.10.22 ([#53](https://github.com/henriquesebastiao/hify/pull/53))
+- yt-dlp updated to 2025.10.22 ([#53](https://github.com/hisu87/hify/pull/53))
 
 ---
 
-[Full changelog on GitHub →](https://github.com/henriquesebastiao/hify/blob/main/CHANGELOG)
+[Full changelog on GitHub →](https://github.com/hisu87/hify/blob/main/CHANGELOG)

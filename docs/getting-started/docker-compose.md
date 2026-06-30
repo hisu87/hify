@@ -14,7 +14,7 @@ Create a `docker-compose.yml` file:
 services:
   hify:
     container_name: hify
-    image: ghcr.io/henriquesebastiao/hify:latest
+    image: ghcr.io/hisu87/hify:latest
     ports:
       - '8000:8000'
     volumes:
@@ -41,7 +41,7 @@ If port 8000 is already in use, map a different host port and set the `HIFY_PORT
 ```yaml
 services:
   hify:
-    image: ghcr.io/henriquesebastiao/hify:latest
+    image: ghcr.io/hisu87/hify:latest
     ports:
       - '9090:30321'
     environment:
@@ -59,7 +59,7 @@ Some ISPs and corporate networks block YouTube. Adding explicit DNS resolvers im
 ```yaml
 services:
   hify:
-    image: ghcr.io/henriquesebastiao/hify:latest
+    image: ghcr.io/hisu87/hify:latest
     ports:
       - '8000:8000'
     volumes:
