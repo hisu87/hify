@@ -626,6 +626,7 @@ function setupMediaSession() {
   }
 }
 
+
 export function formatTime(seconds) {
   if (!isFinite(seconds) || seconds < 0) return '0:00'
   const total = Math.floor(seconds)
@@ -671,7 +672,8 @@ export function usePlayer() {
     toggleMute,
     next,
     prev,
-    setRepeat,
+    setRepeat: cycleRepeat,
+    cycleRepeat,
     setShuffle,
     toggleShuffle,
     getAudio,

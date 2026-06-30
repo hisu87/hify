@@ -246,6 +246,52 @@
           </p>
         </div>
 
+        <!-- Playback options -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            Playback Options
+          </label>
+          <div class="space-y-3">
+            <label
+              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+            >
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                v-model="player.isAutomix.value"
+              />
+              <span class="flex-1 text-sm">
+                <span class="block">Automix</span>
+                <span class="block text-[11px] text-base-content/50">
+                  Skip the first 2.5 seconds of each track to eliminate silence.
+                </span>
+              </span>
+            </label>
+
+            <div class="flex items-center justify-between rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5">
+              <span class="flex-1 text-sm">
+                <span class="block">Crossfade</span>
+                <span class="block text-[11px] text-base-content/50">
+                  Overlap tracks by X seconds at the end.
+                </span>
+              </span>
+              <div class="flex items-center gap-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="1"
+                  v-model="player.crossfadeDuration.value"
+                  class="range range-xs range-primary w-24"
+                />
+                <span class="text-xs font-medium w-8 text-right">{{ player.crossfadeDuration.value }}s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Save status -->
         <transition
           enter-active-class="transition duration-200"
@@ -309,9 +355,11 @@
 import { Icon } from '@iconify/vue'
 import { useSettingsManager } from '../model/settings'
 import { useI18n } from '../i18n'
+import { usePlayer } from '../model/player'
 
 const sm = useSettingsManager()
 const { t, locale, setLocale, locales } = useI18n()
+const player = usePlayer()
 
 function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'

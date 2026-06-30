@@ -31,7 +31,6 @@
       <NowPlayingSidebar />
     </div>
     <PlayerBar
-      v-show="route?.name !== 'Player' && route?.name !== 'Lyrics'"
       :is-lyrics-open="isLyricsOpen"
       @open-lyrics="isLyricsOpen = !isLyricsOpen"
     />

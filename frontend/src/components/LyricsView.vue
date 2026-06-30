@@ -601,13 +601,11 @@ function applyLyrics(ast) {
 
 .lyrics-inline-mode .lyric-word,
 .lyrics-inline-mode .lead-line-text {
-  font-size: clamp(1.25rem, 8cqi, 1.75rem) !important;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
+  font-size: clamp(1.5rem, 10cqi, 2.25rem) !important;
 }
 
 .lyrics-inline-mode .lyric-instrument {
-  font-size: clamp(1.5rem, 10cqi, 2rem) !important;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
+  font-size: clamp(2rem, 12cqi, 2.5rem) !important;
 }
 
 .lyrics-inline-mode .lyric-line.unplayed {
