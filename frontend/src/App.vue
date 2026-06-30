@@ -21,7 +21,9 @@
         >
           <router-view v-slot="{ Component, route }">
             <transition name="page" mode="out-in">
-              <component :is="Component" :key="route.fullPath" />
+              <keep-alive :include="['Player']">
+                <component :is="Component" :key="route.fullPath" />
+              </keep-alive>
             </transition>
           </router-view>
         </div>

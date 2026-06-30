@@ -602,10 +602,20 @@ function applyLyrics(ast) {
 .lyrics-inline-mode .lyric-word,
 .lyrics-inline-mode .lead-line-text {
   font-size: clamp(1.25rem, 8cqi, 1.75rem) !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .lyrics-inline-mode .lyric-instrument {
   font-size: clamp(1.5rem, 10cqi, 2rem) !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.lyrics-inline-mode .lyric-line.unplayed {
+  opacity: 0.5 !important;
+}
+
+.lyrics-inline-mode .lyric-line.played {
+  opacity: 0.35 !important;
 }
 
 .lyrics-inline-mode .lyric-line {

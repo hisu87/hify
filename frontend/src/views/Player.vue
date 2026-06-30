@@ -24,7 +24,7 @@
 
     <!-- Empty state -->
     <div
-      v-if="files.length === 0 && !loading"
+      v-if="player.playlist.value.length === 0 && !loading"
       class="flex-1 flex flex-col items-center justify-center text-center p-8"
     >
       <Icon
@@ -150,7 +150,7 @@
             class="icon-btn-large"
             @click="player.prev()"
             :title="t('player.previous')"
-            :disabled="files.length === 0"
+            :disabled="player.playlist.value.length === 0"
           >
             <Icon
               icon="clarity:step-forward-2-line"
@@ -160,7 +160,7 @@
           <button
             class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50"
             @click="player.toggle()"
-            :disabled="files.length === 0"
+            :disabled="player.playlist.value.length === 0"
             :title="
               player.isPlaying.value ? t('player.pause') : t('player.play')
             "
@@ -178,7 +178,7 @@
             class="icon-btn-large"
             @click="player.next()"
             :title="t('player.next')"
-            :disabled="files.length === 0"
+            :disabled="player.playlist.value.length === 0"
           >
             <Icon icon="clarity:step-forward-2-line" class="h-8 w-8" />
           </button>
@@ -279,10 +279,10 @@
           v-show="activeTab === 'queue'"
           class="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 relative z-10 custom-scrollbar"
         >
-          <ul v-if="files.length > 0" class="space-y-2">
+          <ul v-if="player.playlist.value.length > 0" class="space-y-2">
             <li
-              v-for="(file, idx) in files"
-              :key="file"
+              v-for="(track, idx) in player.playlist.value"
+              :key="track.file + idx"
               class="rounded-2xl px-4 py-3 flex items-center gap-4 cursor-pointer transition-all duration-200"
               :class="
                 idx === player.currentIndex.value
@@ -295,12 +295,12 @@
                 class="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden flex items-center justify-center bg-black/40 shadow-inner"
               >
                 <img
-                  v-if="!coverFailed[file]"
-                  :src="coverUrlFor(file)"
-                  :alt="trackInfo(file).title"
+                  v-if="!coverFailed[track.file]"
+                  :src="track.cover"
+                  :alt="track.title"
                   class="absolute inset-0 h-full w-full object-cover"
                   loading="lazy"
-                  @error="markCoverFailed(file)"
+                  @error="markCoverFailed(track.file)"
                 />
                 <span
                   v-if="
@@ -312,19 +312,19 @@
                   <span></span><span></span><span></span>
                 </span>
                 <Icon
-                  v-else-if="coverFailed[file]"
+                  v-else-if="coverFailed[track.file]"
                   icon="clarity:music-note-line"
                   class="h-6 w-6 text-white/50"
                 />
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-lg truncate font-bold text-white drop-shadow-md">
-                  {{ trackInfo(file).title }}
+                  {{ track.title }}
                 </p>
                 <p
                   class="text-sm truncate text-white/60 font-medium drop-shadow-sm mt-0.5"
                 >
-                  {{ trackInfo(file).artist || t('common.unknownArtist') }}
+                  {{ track.artist || t('common.unknownArtist') }}
                 </p>
               </div>
             </li>
@@ -354,7 +354,7 @@ const player = usePlayer()
 const router = useRouter()
 
 const activeTab = ref('queue') // 'queue' | 'lyrics'
-const files = ref([])
+
 const loading = ref(false)
 const progressBar = ref(null)
 const coverFailed = ref({})
@@ -371,12 +371,13 @@ function markCoverFailed(file) {
 async function load() {
   loading.value = true
   try {
-    const res = await API.listDownloads()
-    files.value = res.data || []
-    // If the player was empty (direct nav to /player), seed the queue
+    // If the player was completely empty, seed the playlist
     // with the library so the user has something to play.
-    if (player.playlist.value.length === 0 && files.value.length > 0) {
-      player.setPlaylist(files.value)
+    if (player.playlist.value.length === 0) {
+      const res = await API.listDownloads()
+      if (res.data && res.data.length > 0) {
+        player.setPlaylist(res.data)
+      }
     }
   } finally {
     loading.value = false
@@ -384,14 +385,7 @@ async function load() {
 }
 
 function onPick(idx) {
-  if (
-    player.playlist.value.length !== files.value.length ||
-    player.playlist.value[idx]?.file !== files.value[idx]
-  ) {
-    player.setPlaylist(files.value, { startIndex: idx })
-  } else {
-    player.playAt(idx)
-  }
+  player.playAt(idx)
 }
 
 function trackInfo(file) {
