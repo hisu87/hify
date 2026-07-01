@@ -139,9 +139,15 @@ function setPlaylist(files, options = {}) {
     return {
       ...f,
       url: f.url || fileUrl(f.file),
-      cover: f.cover || (f.cover_url ? (f.cover_url.startsWith('http') ? f.cover_url : `/${f.cover_url}`) : coverUrl(f.file)),
+      cover:
+        f.cover ||
+        (f.cover_url
+          ? f.cover_url.startsWith('http')
+            ? f.cover_url
+            : `/${f.cover_url}`
+          : coverUrl(f.file)),
       title: f.title || f.file,
-      artist: f.artist || ''
+      artist: f.artist || '',
     }
   })
   playlist.value = tracks
@@ -397,14 +403,21 @@ function prev() {
 }
 
 function addToQueue(fileOrTrack) {
-  let track = typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
+  let track =
+    typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
   if (!track.url) {
     track = {
       ...track,
       url: track.url || fileUrl(track.file),
-      cover: track.cover || (track.cover_url ? (track.cover_url.startsWith('http') ? track.cover_url : `/${track.cover_url}`) : coverUrl(track.file)),
+      cover:
+        track.cover ||
+        (track.cover_url
+          ? track.cover_url.startsWith('http')
+            ? track.cover_url
+            : `/${track.cover_url}`
+          : coverUrl(track.file)),
       title: track.title || track.file,
-      artist: track.artist || ''
+      artist: track.artist || '',
     }
   }
   userQueue.value.push(track)
@@ -418,14 +431,21 @@ function addToQueue(fileOrTrack) {
 }
 
 function playNext(fileOrTrack) {
-  let track = typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
+  let track =
+    typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
   if (!track.url) {
     track = {
       ...track,
       url: track.url || fileUrl(track.file),
-      cover: track.cover || (track.cover_url ? (track.cover_url.startsWith('http') ? track.cover_url : `/${track.cover_url}`) : coverUrl(track.file)),
+      cover:
+        track.cover ||
+        (track.cover_url
+          ? track.cover_url.startsWith('http')
+            ? track.cover_url
+            : `/${track.cover_url}`
+          : coverUrl(track.file)),
       title: track.title || track.file,
-      artist: track.artist || ''
+      artist: track.artist || '',
     }
   }
   userQueue.value.unshift(track)
@@ -658,7 +678,6 @@ function setupMediaSession() {
     })
   }
 }
-
 
 export function formatTime(seconds) {
   if (!isFinite(seconds) || seconds < 0) return '0:00'

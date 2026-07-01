@@ -19,10 +19,11 @@ working without changes:
 from __future__ import annotations
 
 import asyncio
-import os
 import contextlib
 import json
+import os
 import re
+import uuid
 from pathlib import Path
 from typing import Any, Optional
 
@@ -36,10 +37,14 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from loguru import logger
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from . import lyrics, m3u, providers, spotify
 from .downloader import Downloader
 from .monitor import PlaylistMonitorDB, check_playlist
+
+limiter = Limiter(key_func=get_remote_address)
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
@@ -191,7 +196,9 @@ async def get_lyrics_endpoint(id: str):
 
 
 @router.get('/api/v1/lyrics/search')
+@limiter.limit('30/minute')
 async def search_lyrics_endpoint(  # noqa: PLR0913
+    request: Request,
     title: str = '',
     artist: str = '',
     album: str = '',
@@ -228,13 +235,15 @@ async def search_lyrics_endpoint(  # noqa: PLR0913
             elif lrc_path.exists():
                 text = lrc_path.read_text(encoding='utf-8')
                 parsed = lyrics.parse_enhanced_lrc(text)
-                
+
             if parsed:
                 ast = lyrics.NormalizedLyrics(
                     track_id=track_id,
                     isrc=None,
                     provider_name='local',
-                    sync_level='word' if any(line.lead for line in parsed) else 'line',
+                    sync_level='word'
+                    if any(line.lead for line in parsed)
+                    else 'line',
                     lines=parsed,
                 )
                 ast.granularity = ast.sync_level
@@ -402,15 +411,15 @@ def _song_for_download(url: str) -> dict[str, Any]:
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
 
-import uuid
-
 def _register_job(song: dict[str, Any], status: str = 'queued') -> str:
-    base_id = str(song.get('id') or song.get('song_id') or song.get('url') or id(song))
+    base_id = str(
+        song.get('id') or song.get('song_id') or song.get('url') or id(song)
+    )
     song_id = base_id
     # Ensure unique job ID in case the same song is queued multiple times
     while song_id in state.download_jobs:
-        song_id = f"{base_id}_{uuid.uuid4().hex[:8]}"
-        
+        song_id = f'{base_id}_{uuid.uuid4().hex[:8]}'
+
     state.download_jobs[song_id] = {
         'song': song,
         'status': status,
@@ -494,7 +503,7 @@ async def _run_download(
             song_data['file_path'] = filename
             state.db.save_track_metadata(song_id, song_data)
         except Exception as e:
-            logger.error(f"Failed to save metadata to DB: {e}")
+            logger.error(f'Failed to save metadata to DB: {e}')
 
     await state.connections.broadcast({
         'song': song,
@@ -507,7 +516,9 @@ async def _run_download(
 
 
 @router.post('/api/download/url')
+@limiter.limit('10/minute')
 async def download_endpoint(
+    request: Request,
     url: str = Query(...),
     client_id: str = Query(''),
     client_hints: Optional[dict[str, Any]] = Body(None),
@@ -570,7 +581,9 @@ async def _process_batch(
                 'Failed to resolve playlist name for {}', playlist_url
             )
 
-    async def _bounded(song: dict[str, Any], song_id: str, sem: asyncio.Semaphore) -> dict[str, Any]:
+    async def _bounded(
+        song: dict[str, Any], song_id: str, sem: asyncio.Semaphore
+    ) -> dict[str, Any]:
         async with sem:
             try:
                 filename = await _run_download(
@@ -580,7 +593,7 @@ async def _process_batch(
                 filename = None
             return {'song': song, 'filename': filename}
 
-    max_downloads = int(os.getenv('MAX_CONCURRENT_DOWNLOADS', 3))
+    max_downloads = int(os.getenv('MAX_CONCURRENT_DOWNLOADS', '3'))
     sem = asyncio.Semaphore(max_downloads)
 
     results = await asyncio.gather(
@@ -622,6 +635,7 @@ async def _process_batch(
 
 
 @router.post('/api/download/batch')
+@limiter.limit('10/minute')
 async def download_batch_endpoint(request: Request) -> dict[str, Any]:
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')

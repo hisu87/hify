@@ -87,47 +87,62 @@ class NormalizedLyrics:
 
     def to_ttml(self) -> str:
         """Render to TTML format (XML) for Karaoke-style sync."""
+
         def format_time(seconds: float) -> str:
             hours = int(seconds // 3600)
             minutes = int((seconds % 3600) // 60)
             secs = seconds % 60
             return f'{hours:02d}:{minutes:02d}:{secs:06.3f}'
-            
+
         out = []
         out.append('<?xml version="1.0" encoding="utf-8"?>')
         out.append('<tt xmlns="http://www.w3.org/ns/ttml">')
         out.append('  <body>')
-        
+
         if self.lines:
             overall_begin = format_time(self.lines[0].start_time)
             overall_end = format_time(self.lines[-1].end_time)
         else:
-            overall_begin = "00:00:00.000"
-            overall_end = "00:00:00.000"
-            
+            overall_begin = '00:00:00.000'
+            overall_end = '00:00:00.000'
+
         out.append(f'    <div begin="{overall_begin}" end="{overall_end}">')
-        
+
         for line in self.lines:
             if line.is_instrumental:
                 continue
             line_begin = format_time(line.start_time)
             line_end = format_time(line.end_time)
             out.append(f'      <p begin="{line_begin}" end="{line_end}">')
-            
+
             if self.sync_level in {'word', 'syllable'} and line.lead:
                 for token in line.lead:
                     t_begin = format_time(token.start_time)
                     t_end = format_time(token.end_time)
-                    text = token.text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                    text = (
+                        token.text
+                        .replace('&', '&amp;')
+                        .replace('<', '&lt;')
+                        .replace('>', '&gt;')
+                    )
                     if token.is_trailing_space:
                         text += ' '
-                    out.append(f'        <span begin="{t_begin}" end="{t_end}">{text}</span>')
+                    out.append(
+                        f'        <span begin="{t_begin}" end="{t_end}">{text}</span>'
+                    )
             else:
-                text = line.raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                out.append(f'        <span begin="{line_begin}" end="{line_end}">{text}</span>')
-                
+                text = (
+                    line.raw_text
+                    .replace('&', '&amp;')
+                    .replace('<', '&lt;')
+                    .replace('>', '&gt;')
+                )
+                out.append(
+                    f'        <span begin="{line_begin}" end="{line_end}">{text}</span>'
+                )
+
             out.append('      </p>')
-            
+
         out.append('    </div>')
         out.append('  </body>')
         out.append('</tt>')
@@ -534,7 +549,9 @@ class LyricsResolver:
                             'granularity': getattr(
                                 result, 'granularity', result.sync_level
                             ),
-                            'lines': [line_ast.__dict__ for line_ast in result.lines],
+                            'lines': [
+                                line_ast.__dict__ for line_ast in result.lines
+                            ],
                         }
                         for line in payload['lines']:
                             line['lead'] = [t.__dict__ for t in line['lead']]

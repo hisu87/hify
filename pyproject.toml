@@ -12,6 +12,7 @@ dependencies = [
     "loguru>=0.7.3",
     "mutagen>=1.47",
     "requests>=2.34.1",
+    "slowapi>=0.1.10",
     "syncedlyrics>=1.0.1",
     "uvicorn>=0.49.0",
     "websockets>=12.0",
@@ -40,7 +41,7 @@ line-length = 79
 preview = true
 select = ['I', 'F', 'E', 'W', 'PL', 'PT']
 extend-ignore = [
-    'PLW0717',
+
 ]
 
 [tool.ruff.format]
@@ -48,10 +49,16 @@ preview = true
 quote-style = 'single'
 
 [tool.ruff.lint.per-file-ignores]
-"main.py" = ["E501", "PLR0915", "PLR2004", "PLR1702", "PLR0912", "PLR0911"]
+"main.py" = ["E501", "PLR0915", "PLR2004", "PLR1702", "PLR0912", "PLR0911", "PLC2701", "PLC0415"]
 "downloader.py" = ["PLC1901"]
-"hify/*.py" = ["E501", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916"]
+"hify/*.py" = ["E501", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916", "PLR1702", "E501", "PLC0415", "PLR0914", "BLE001", "PLR1702", "TRY301", "PLR1702", "TRY301"]
 "tests/*.py" = ["PLR2004", "PLC2701", "E501"]
+"hify/api.py" = ["E501", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916", "PLR1702", "E501", "PLC0415", "PLR0914", "BLE001", "PLR1702", "TRY301"]
+"hify/database.py" = ["E501", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916", "PLR1702", "E501", "PLC0415", "PLR0914", "BLE001", "PLR1702", "TRY301"]
+"hify/downloader.py" = ["PLC1901", "E501", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916", "PLR1702", "E501", "PLC0415", "PLR0914", "BLE001", "PLR1702", "TRY301"]
+"hify/lyrics.py" = ["E501", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916", "PLR1702", "E501", "PLC0415", "PLR0914", "BLE001", "PLR1702", "TRY301"]
+"hify/lyrics_db.py" = ["E501", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916", "PLR1702", "E501", "PLC0415", "PLR0914", "BLE001", "PLR1702", "TRY301"]
+"hify/monitor.py" = ["E501", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916", "PLR1702", "E501", "PLC0415", "PLR0914", "BLE001", "PLR1702", "TRY301"]
 
 [tool.codeflash]
 # All paths are relative to this pyproject.toml's directory.

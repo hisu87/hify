@@ -6,13 +6,13 @@ export function parseTtml(rawPayload) {
   if (Array.isArray(rawPayload)) {
     return parseWordJson(rawPayload)
   }
-  
+
   if (typeof rawPayload === 'string') {
     try {
       const parsed = JSON.parse(rawPayload)
       return parseWordJson(parsed)
     } catch (e) {
-      // It might be raw XML string (TTML), but in Hify we process TTML in the backend 
+      // It might be raw XML string (TTML), but in Hify we process TTML in the backend
       // and send JSON. So just in case, return fallback line parser.
       return { lines: [], isWordSync: false }
     }
@@ -38,7 +38,7 @@ function parseWordJson(linesArray) {
       lead: [],
       background: [],
       isInstrumental: line.is_instrumental || false,
-      agent_id: line.agent_id
+      agent_id: line.agent_id,
     }
 
     // `lead` or `words` is the array of word-sync items
@@ -50,7 +50,7 @@ function parseWordJson(linesArray) {
           text: w.text || '',
           startTime: w.start_time || w.start || parsedLine.startTime,
           endTime: w.end_time || w.end || parsedLine.endTime,
-          isTrailingSpace: w.is_trailing_space || w.isTrailingSpace || false
+          isTrailingSpace: w.is_trailing_space || w.isTrailingSpace || false,
         }
         parsedLine.words.push(token)
         parsedLine.lead.push(token)
@@ -61,7 +61,7 @@ function parseWordJson(linesArray) {
         text: parsedLine.rawText,
         startTime: parsedLine.startTime,
         endTime: parsedLine.endTime,
-        isTrailingSpace: false
+        isTrailingSpace: false,
       }
       parsedLine.words.push(token)
       parsedLine.lead.push(token)
@@ -73,7 +73,7 @@ function parseWordJson(linesArray) {
           text: w.text || '',
           startTime: w.start_time || w.start || parsedLine.startTime,
           endTime: w.end_time || w.end || parsedLine.endTime,
-          isTrailingSpace: w.is_trailing_space || w.isTrailingSpace || false
+          isTrailingSpace: w.is_trailing_space || w.isTrailingSpace || false,
         }
         parsedLine.background.push(token)
       }
@@ -84,6 +84,6 @@ function parseWordJson(linesArray) {
 
   return {
     lines: resultLines,
-    isWordSync: hasWordSync
+    isWordSync: hasWordSync,
   }
 }

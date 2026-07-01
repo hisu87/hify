@@ -100,7 +100,7 @@ class PlaylistMonitorDB:
                         ON DELETE CASCADE,
                     UNIQUE(playlist_id, track_spotify_id)
                 );
-                CREATE INDEX IF NOT EXISTS idx_downloaded_track_spotify_id 
+                CREATE INDEX IF NOT EXISTS idx_downloaded_track_spotify_id
                     ON downloaded_tracks(track_spotify_id);
             """)
             # Migration: add filename column if it doesn't exist yet
@@ -379,54 +379,100 @@ async def check_playlist(  # noqa: PLR0913
             if hasattr(db, '_path'):
                 try:
                     import sqlite3
+
                     # Use a quick sync connection since this runs rarely
-                    with sqlite3.connect(db._path, check_same_thread=False) as conn:
-                        artist_name = song.get('artist') or (song.get('artists')[0] if song.get('artists') else '')
-                        artist_id = f"ar_{hash(artist_name)}" if artist_name else None
+                    with sqlite3.connect(
+                        db._path, check_same_thread=False
+                    ) as conn:
+                        artist_name = song.get('artist') or (
+                            song.get('artists')[0]
+                            if song.get('artists')
+                            else ''
+                        )
+                        artist_id = (
+                            f'ar_{hash(artist_name)}' if artist_name else None
+                        )
                         if artist_id and artist_name:
-                            conn.execute("INSERT OR IGNORE INTO artists (id, name) VALUES (?, ?)", (artist_id, artist_name))
+                            conn.execute(
+                                'INSERT OR IGNORE INTO artists (id, name) VALUES (?, ?)',
+                                (artist_id, artist_name),
+                            )
 
-                        album_name = song.get('album_name') or song.get('album')
-                        album_id = f"al_{hash(album_name)}" if album_name else None
+                        album_name = song.get('album_name') or song.get(
+                            'album'
+                        )
+                        album_id = (
+                            f'al_{hash(album_name)}' if album_name else None
+                        )
                         if album_id and album_name:
-                            conn.execute("INSERT OR IGNORE INTO albums (id, title, cover_art_path, release_year) VALUES (?, ?, ?, ?)",
-                                        (album_id, album_name, song.get('cover_url'), song.get('year')))
+                            conn.execute(
+                                'INSERT OR IGNORE INTO albums (id, title, cover_art_path, release_year) VALUES (?, ?, ?, ?)',
+                                (
+                                    album_id,
+                                    album_name,
+                                    song.get('cover_url'),
+                                    song.get('year'),
+                                ),
+                            )
 
-                        conn.execute("""
+                        conn.execute(
+                            """
                             INSERT INTO tracks (id, title, file_path, duration, artist_id, album_id)
                             VALUES (?, ?, ?, ?, ?, ?)
                             ON CONFLICT(id) DO UPDATE SET
                             title=excluded.title, file_path=excluded.file_path, duration=excluded.duration
-                        """, (
-                            track_id,
-                            song.get('title') or song.get('name'),
-                            filename,
-                            song.get('duration_ms') or song.get('duration'),
-                            artist_id,
-                            album_id
-                        ))
+                        """,
+                            (
+                                track_id,
+                                song.get('title') or song.get('name'),
+                                filename,
+                                song.get('duration_ms')
+                                or song.get('duration'),
+                                artist_id,
+                                album_id,
+                            ),
+                        )
                 except Exception as e:
-                    logger.error(f"Error saving background track metadata: {e}")
+                    logger.error(
+                        f'Error saving background track metadata: {e}'
+                    )
 
             # Step 3: Background Task (Tải lyrics ngầm)
             async def _bg_fetch_lyrics(s_dict: dict[str, Any]):
                 from hify import lyrics
-                eff = settings.get('lyrics_providers', 'lrclib') if settings else 'lrclib'
+
+                eff = (
+                    settings.get('lyrics_providers', 'lrclib')
+                    if settings
+                    else 'lrclib'
+                )
                 provs = []
                 for p in [x.strip() for x in eff.split(',') if x.strip()]:
-                    if p == 'amll': provs.append(lyrics.AmllTtmlProvider())
-                    elif p == 'netease': provs.append(lyrics.NetEaseYrcProvider())
-                    elif p == 'lrclib': provs.append(lyrics.LrcLibProvider())
-                    elif p == 'musixmatch': provs.append(lyrics.MusixmatchTokenProvider())
-                if not provs: provs.append(lyrics.LrcLibProvider())
+                    if p == 'amll':
+                        provs.append(lyrics.AmllTtmlProvider())
+                    elif p == 'netease':
+                        provs.append(lyrics.NetEaseYrcProvider())
+                    elif p == 'lrclib':
+                        provs.append(lyrics.LrcLibProvider())
+                    elif p == 'musixmatch':
+                        provs.append(lyrics.MusixmatchTokenProvider())
+                if not provs:
+                    provs.append(lyrics.LrcLibProvider())
 
                 res = lyrics.LyricsResolver(providers=provs)
                 try:
                     # Tự động cache vào lyrics_db bên trong hàm resolve
                     await res.resolve(s_dict)
-                    logger.debug('Successfully cached background lyrics for {}', s_dict.get('song_id'))
+                    logger.debug(
+                        'Successfully cached background lyrics for {}',
+                        s_dict.get('song_id'),
+                    )
                 except Exception as e:
-                    logger.warning('Failed background lyrics fetch for {}: {}', s_dict.get('song_id'), e)
+                    logger.warning(
+                        'Failed background lyrics fetch for {}: {}',
+                        s_dict.get('song_id'),
+                        e,
+                    )
 
             # Khởi chạy ngầm không chặn luồng chính
             asyncio.create_task(_bg_fetch_lyrics(song))
@@ -535,10 +581,10 @@ def sync_filesystem_to_db(download_dir: Path, db_manager):
     Scan DOWNLOAD_DIR for audio files, extract tags via mutagen, and upsert into the database.
     Also removes tracks from DB that no longer exist on disk.
     """
-    logger.info("Starting filesystem to DB sync...")
+    logger.info('Starting filesystem to DB sync...')
     valid_paths = set()
     extensions = {'.mp3', '.flac', '.m4a', '.ogg', '.opus', '.wav', '.aac'}
-    covers_dir = Path("data/covers")
+    covers_dir = Path('data/covers')
     covers_dir.mkdir(parents=True, exist_ok=True)
 
     count = 0
@@ -560,8 +606,8 @@ def sync_filesystem_to_db(download_dir: Path, db_manager):
 
                 # Basic tagging mappings
                 title = file_path.stem
-                artist = "Unknown"
-                album = "Unknown"
+                artist = 'Unknown'
+                album = 'Unknown'
                 genre = None
                 year = None
                 duration_ms = 0
@@ -576,13 +622,17 @@ def sync_filesystem_to_db(download_dir: Path, db_manager):
                     if 'title' in tags or 'TIT2' in tags:
                         title = tags.get('title', tags.get('TIT2', [title]))[0]
                     if 'artist' in tags or 'TPE1' in tags:
-                        artist = tags.get('artist', tags.get('TPE1', [artist]))[0]
+                        artist = tags.get(
+                            'artist', tags.get('TPE1', [artist])
+                        )[0]
                     if 'album' in tags or 'TALB' in tags:
                         album = tags.get('album', tags.get('TALB', [album]))[0]
                     if 'genre' in tags or 'TCON' in tags:
                         genre = tags.get('genre', tags.get('TCON', [genre]))[0]
                     if 'date' in tags or 'TYER' in tags or 'TDRC' in tags:
-                        year = tags.get('date', tags.get('TYER', tags.get('TDRC', [year])))[0]
+                        year = tags.get(
+                            'date', tags.get('TYER', tags.get('TDRC', [year]))
+                        )[0]
 
                 # Cover Art Extraction
                 # Use the logic similar to main.py `_extract_cover` but directly from `audio.pictures` or ID3 APIC
@@ -602,20 +652,22 @@ def sync_filesystem_to_db(download_dir: Path, db_manager):
 
                 if cover_data:
                     cover_hash = hashlib.md5(cover_data).hexdigest()
-                    cover_file = covers_dir / f"{cover_hash}.jpg"  # Simplified to .jpg
+                    cover_file = (
+                        covers_dir / f'{cover_hash}.jpg'
+                    )  # Simplified to .jpg
                     if not cover_file.exists():
                         cover_file.write_bytes(cover_data)
                     cover_url = cover_file.as_posix()
 
                 # Check for string conversion of mutagen tags
-                title = str(title) if title else "Unknown"
-                artist = str(artist) if artist else "Unknown"
-                album = str(album) if album else "Unknown"
+                title = str(title) if title else 'Unknown'
+                artist = str(artist) if artist else 'Unknown'
+                album = str(album) if album else 'Unknown'
                 genre = str(genre) if genre else None
                 year = str(year) if year else None
 
                 # Generate unique track ID based on file path
-                track_id = f"tr_{hashlib.md5(rel_path.encode()).hexdigest()}"
+                track_id = f'tr_{hashlib.md5(rel_path.encode()).hexdigest()}'
 
                 track_data = {
                     'title': title,
@@ -633,7 +685,7 @@ def sync_filesystem_to_db(download_dir: Path, db_manager):
                 count += 1
 
             except Exception as e:
-                logger.error(f"Error parsing file {file_path}: {e}")
+                logger.error(f'Error parsing file {file_path}: {e}')
 
-    logger.info(f"Sync complete. Upserted {count} tracks.")
+    logger.info(f'Sync complete. Upserted {count} tracks.')
     db_manager.delete_orphan_tracks(valid_paths)
