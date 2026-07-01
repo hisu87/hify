@@ -1,301 +1,360 @@
 <template>
-  <div class="min-h-screen">
-    <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold tracking-tight">
+  <div class="min-h-screen flex flex-col w-full relative pb-28">
+    <!-- Header -->
+    <div
+      class="px-4 py-8 sm:px-6 xl:px-12 shrink-0 flex items-center justify-between"
+    >
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight text-white drop-shadow-md">
           {{ t('player.title') }}
         </h1>
-        <p class="mt-1 text-sm text-base-content/60">
+        <p class="mt-1 text-base text-white/70 drop-shadow">
           {{ t('player.subtitle') }}
         </p>
       </div>
-
-      <!-- Empty state -->
-      <div
-        v-if="files.length === 0 && !loading"
-        class="surface rounded-2xl p-12 flex flex-col items-center text-center"
+      <!-- Open Fullscreen shortcut -->
+      <button
+        class="icon-btn-large hidden lg:flex"
+        @click="openFullscreenLyrics"
+        title="Full Screen Overlay"
       >
-        <Icon
-          icon="clarity:headphones-line"
-          class="h-12 w-12 text-base-content/20 mb-4"
-        />
-        <p class="text-base-content/50 text-sm">{{ t('player.empty') }}</p>
-        <p class="text-base-content/40 text-xs mt-1">
-          {{ t('player.emptyHint') }}
-        </p>
-      </div>
+        <Icon icon="clarity:window-max-line" class="h-6 w-6" />
+      </button>
+    </div>
 
-      <!-- Skeleton -->
-      <div v-else-if="loading && !player.currentTrack.value" class="space-y-3">
-        <div class="skeleton h-72 rounded-3xl" />
-        <div class="skeleton h-16 rounded-2xl" />
-        <div class="skeleton h-16 rounded-2xl" />
-      </div>
+    <!-- Empty state -->
+    <div
+      v-if="player.playlist.value.length === 0 && !loading"
+      class="flex-1 flex flex-col items-center justify-center text-center p-8"
+    >
+      <Icon
+        icon="clarity:headphones-line"
+        class="h-16 w-16 text-white/30 mb-4 drop-shadow"
+      />
+      <p class="text-white/60 text-lg drop-shadow">{{ t('player.empty') }}</p>
+      <p class="text-white/50 text-sm mt-2 drop-shadow">
+        {{ t('player.emptyHint') }}
+      </p>
+    </div>
 
-      <!-- Player + queue -->
-      <div v-else class="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <!-- Player card -->
-        <section
-          class="surface rounded-3xl p-6 sm:p-8 flex flex-col items-center text-center"
+    <!-- Skeleton -->
+    <div
+      v-else-if="loading && !player.currentTrack.value"
+      class="flex-1 flex items-center justify-center"
+    >
+      <div class="space-y-4 w-full max-w-md">
+        <div class="skeleton h-96 w-full rounded-[2.5rem] bg-white/10" />
+        <div class="skeleton h-8 w-3/4 rounded-xl bg-white/10" />
+        <div class="skeleton h-6 w-1/2 rounded-xl bg-white/10" />
+      </div>
+    </div>
+
+    <!-- Player + queue/lyrics -->
+    <div
+      v-else
+      class="flex-1 grid gap-10 lg:grid-cols-2 px-4 pb-8 sm:px-6 xl:px-12 w-full max-w-[1920px] mx-auto min-h-0"
+    >
+      <!-- Player Section (Left) -->
+      <section
+        class="flex flex-col items-center xl:items-start justify-center text-center xl:text-left h-full"
+      >
+        <!-- Massive Cover -->
+        <div
+          class="relative h-72 w-72 sm:h-80 sm:w-80 xl:h-[28rem] xl:w-[28rem] rounded-[2.5rem] bg-black/20 text-white flex items-center justify-center overflow-hidden shadow-2xl ring-1 ring-white/10"
+          :class="{ 'pulse-glow-large': player.isPlaying.value }"
         >
-          <!-- Cover -->
+          <img
+            v-if="
+              player.currentTrack.value &&
+              player.currentTrack.value.cover &&
+              !coverFailed[player.currentTrack.value.file]
+            "
+            :src="player.currentTrack.value.cover"
+            :alt="player.currentTrack.value.title"
+            class="absolute inset-0 h-full w-full object-cover"
+            @error="markCoverFailed(player.currentTrack.value.file)"
+          />
+          <img
+            v-else
+            src="../assets/14882.png"
+            class="h-32 w-32 object-contain opacity-60 drop-shadow-md"
+          />
           <div
-            class="relative h-56 w-56 sm:h-64 sm:w-64 rounded-3xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden shadow-glow"
-            :class="{ 'pulse-glow': player.isPlaying.value }"
+            v-if="player.isPlaying.value"
+            class="absolute bottom-6 right-6 equalizer h-8"
+            aria-hidden="true"
           >
-            <img
-              v-if="
-                player.currentTrack.value &&
-                player.currentTrack.value.cover &&
-                !coverFailed[player.currentTrack.value.file]
-              "
-              :src="player.currentTrack.value.cover"
-              :alt="player.currentTrack.value.title"
-              class="absolute inset-0 h-full w-full object-cover"
-              @error="markCoverFailed(player.currentTrack.value.file)"
-            />
-            <img
-              v-else
-              src="../assets/14882.png"
-              class="h-24 w-24 object-contain opacity-60"
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <!-- Title / artist -->
+        <div class="mt-12 w-full max-w-[28rem]">
+          <p
+            class="text-3xl sm:text-4xl font-extrabold tracking-tight truncate text-white drop-shadow-lg"
+          >
+            {{ trackTitle }}
+          </p>
+          <p
+            class="text-lg sm:text-xl text-white/70 truncate mt-2 font-medium drop-shadow-md"
+          >
+            {{ trackArtist }}
+          </p>
+        </div>
+
+        <!-- Progress -->
+        <div class="mt-10 w-full max-w-[28rem]">
+          <div
+            class="relative h-3 rounded-full bg-black/30 overflow-hidden cursor-pointer group shadow-inner ring-1 ring-white/10"
+            ref="progressBar"
+            @click="onSeekClick"
+            @pointerdown="onSeekStart"
+          >
+            <div
+              class="h-full bg-white transition-[width] duration-150 shadow-[0_0_15px_rgba(255,255,255,0.8)]"
+              :style="`width: ${player.progressPct.value}%`"
             />
             <div
-              v-if="player.isPlaying.value"
-              class="absolute bottom-3 right-3 equalizer h-5"
-              aria-hidden="true"
-            >
-              <span></span><span></span><span></span>
-            </div>
-          </div>
-
-          <!-- Title / artist -->
-          <div class="mt-6 w-full">
-            <p class="text-xl font-bold tracking-tight truncate">
-              {{ trackTitle }}
-            </p>
-            <p class="text-sm text-base-content/60 truncate mt-0.5">
-              {{ trackArtist }}
-            </p>
-          </div>
-
-          <!-- Progress -->
-          <div class="mt-6 w-full">
-            <div
-              class="relative h-2 rounded-full bg-white/10 overflow-hidden cursor-pointer group"
-              ref="progressBar"
-              @click="onSeekClick"
-              @pointerdown="onSeekStart"
-            >
-              <div
-                class="h-full bg-primary transition-[width] duration-150"
-                :style="`width: ${player.progressPct.value}%`"
-              />
-              <div
-                class="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full bg-primary shadow-glow-sm transition-all duration-150 opacity-0 group-hover:opacity-100"
-                :style="`left: calc(${player.progressPct.value}% - 7px)`"
-              />
-            </div>
-            <div
-              class="mt-2 flex items-center justify-between text-xs text-base-content/50 tabular-nums"
-            >
-              <span>{{ formatTime(player.currentTime.value) }}</span>
-              <span>{{ formatTime(player.duration.value) }}</span>
-            </div>
-          </div>
-
-          <!-- Transport -->
-          <div class="mt-5 flex items-center justify-center gap-3">
-            <button
-              class="icon-btn"
-              :class="{ 'icon-btn-active': player.shuffle.value }"
-              @click="player.toggleShuffle()"
-              :title="
-                player.shuffle.value
-                  ? t('player.shuffleOn')
-                  : t('player.shuffleOff')
-              "
-            >
-              <Icon icon="clarity:shuffle-line" class="h-5 w-5" />
-            </button>
-            <button
-              class="icon-btn"
-              @click="player.prev()"
-              :title="t('player.previous')"
-              :disabled="files.length === 0"
-            >
-              <Icon
-                icon="clarity:step-forward-2-line"
-                class="h-5 w-5 -scale-x-100"
-              />
-            </button>
-            <button
-              class="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-content shadow-glow-sm hover:scale-105 active:scale-95 transition disabled:opacity-50"
-              @click="player.toggle()"
-              :disabled="files.length === 0"
-              :title="
-                player.isPlaying.value ? t('player.pause') : t('player.play')
-              "
-            >
-              <Icon
-                :icon="
-                  player.isPlaying.value
-                    ? 'clarity:pause-solid'
-                    : 'clarity:play-solid'
-                "
-                class="h-6 w-6"
-              />
-            </button>
-            <button
-              class="icon-btn"
-              @click="player.next()"
-              :title="t('player.next')"
-              :disabled="files.length === 0"
-            >
-              <Icon icon="clarity:step-forward-2-line" class="h-5 w-5" />
-            </button>
-            <button
-              class="icon-btn relative"
-              :class="{ 'icon-btn-active': player.repeatMode.value !== 'off' }"
-              @click="player.cycleRepeat()"
-              :title="repeatTitle"
-            >
-              <Icon icon="clarity:refresh-line" class="h-5 w-5" />
-              <span
-                v-if="player.repeatMode.value === 'one'"
-                class="absolute -bottom-0.5 -right-0.5 h-4 min-w-[1rem] px-1 rounded-full bg-primary text-primary-content text-[9px] font-bold flex items-center justify-center"
-              >
-                1
-              </span>
-            </button>
-          </div>
-
-          <!-- Volume -->
-          <div class="mt-6 w-full max-w-xs flex items-center gap-3">
-            <button
-              class="icon-btn"
-              @click="player.toggleMute()"
-              :title="
-                player.isMuted.value ? t('player.unmute') : t('player.mute')
-              "
-            >
-              <Icon
-                :icon="
-                  player.isMuted.value || player.volume.value === 0
-                    ? 'clarity:volume-mute-line'
-                    : player.volume.value < 0.5
-                      ? 'clarity:volume-down-line'
-                      : 'clarity:volume-up-line'
-                "
-                class="h-5 w-5"
-              />
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              :value="player.isMuted.value ? 0 : player.volume.value"
-              @input="onVolume($event)"
-              class="player-range flex-1"
-              :title="t('player.volume')"
+              class="absolute top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-white shadow-[0_0_20px_rgba(255,255,255,1)] transition-all duration-150 opacity-0 group-hover:opacity-100"
+              :style="`left: calc(${player.progressPct.value}% - 10px)`"
             />
           </div>
-        </section>
+          <div
+            class="mt-3 flex items-center justify-between text-sm text-white/60 font-semibold tabular-nums drop-shadow"
+          >
+            <span>{{ formatTime(player.currentTime.value) }}</span>
+            <span>{{ formatTime(player.duration.value) }}</span>
+          </div>
+        </div>
 
-        <!-- Queue list -->
-        <aside
-          class="surface rounded-3xl p-4 sm:p-5 lg:max-h-[640px] lg:overflow-y-auto"
+        <!-- Transport -->
+        <div
+          class="mt-8 flex items-center justify-center xl:justify-start gap-5 xl:gap-8 w-full max-w-[28rem]"
         >
-          <div class="flex items-center justify-between mb-3 px-1">
-            <h2
-              class="text-xs font-semibold uppercase tracking-wider text-base-content/50"
+          <button
+            class="icon-btn-large"
+            :class="{
+              'text-primary drop-shadow-[0_0_12px_rgba(26,208,92,0.5)]':
+                player.shuffle.value,
+            }"
+            @click="player.toggleShuffle()"
+            :title="
+              player.shuffle.value
+                ? t('player.shuffleOn')
+                : t('player.shuffleOff')
+            "
+          >
+            <Icon icon="clarity:shuffle-line" class="h-6 w-6" />
+          </button>
+          <button
+            class="icon-btn-large"
+            @click="player.prev()"
+            :title="t('player.previous')"
+            :disabled="player.playlist.value.length === 0"
+          >
+            <Icon
+              icon="clarity:step-forward-2-line"
+              class="h-8 w-8 -scale-x-100"
+            />
+          </button>
+          <button
+            class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all duration-300 disabled:opacity-50"
+            @click="player.toggle()"
+            :disabled="player.playlist.value.length === 0"
+            :title="
+              player.isPlaying.value ? t('player.pause') : t('player.play')
+            "
+          >
+            <Icon
+              :icon="
+                player.isPlaying.value
+                  ? 'clarity:pause-solid'
+                  : 'clarity:play-solid'
+              "
+              class="h-10 w-10"
+            />
+          </button>
+          <button
+            class="icon-btn-large"
+            @click="player.next()"
+            :title="t('player.next')"
+            :disabled="player.playlist.value.length === 0"
+          >
+            <Icon icon="clarity:step-forward-2-line" class="h-8 w-8" />
+          </button>
+          <button
+            class="icon-btn-large relative"
+            :class="{
+              'text-primary drop-shadow-[0_0_12px_rgba(26,208,92,0.5)]':
+                player.repeatMode.value !== 'off',
+            }"
+            @click="player.cycleRepeat()"
+            :title="repeatTitle"
+          >
+            <Icon icon="clarity:refresh-line" class="h-6 w-6" />
+            <span
+              v-if="player.repeatMode.value === 'one'"
+              class="absolute -bottom-1 -right-1 h-5 min-w-[1.25rem] px-1 rounded-full bg-primary text-black text-[10px] font-extrabold flex items-center justify-center shadow-md"
             >
-              {{ t('player.queue') }}
-            </h2>
-            <span class="text-[11px] text-base-content/40">
-              {{
-                files.length === 1
-                  ? t('player.countOne', { count: files.length })
-                  : t('player.countMany', { count: files.length })
-              }}
+              1
             </span>
-          </div>
+          </button>
+        </div>
 
-          <ul v-if="files.length > 0" class="space-y-1">
+        <!-- Volume -->
+        <div class="mt-10 w-full max-w-[28rem] flex items-center gap-4">
+          <button
+            class="icon-btn-large"
+            @click="player.toggleMute()"
+            :title="
+              player.isMuted.value ? t('player.unmute') : t('player.mute')
+            "
+          >
+            <Icon
+              :icon="
+                player.isMuted.value || player.volume.value === 0
+                  ? 'clarity:volume-mute-line'
+                  : player.volume.value < 0.5
+                    ? 'clarity:volume-down-line'
+                    : 'clarity:volume-up-line'
+              "
+              class="h-6 w-6"
+            />
+          </button>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            :value="player.isMuted.value ? 0 : player.volume.value"
+            @input="onVolume($event)"
+            class="player-range-large flex-1"
+            :title="t('player.volume')"
+          />
+        </div>
+      </section>
+
+      <!-- Immersive Lyrics / Queue Section (Right) -->
+      <aside
+        class="flex flex-col h-[600px] lg:h-full w-full relative rounded-[2.5rem] overflow-hidden bg-black/10 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl"
+      >
+        <!-- Tab Selector -->
+        <div
+          class="flex items-center justify-center gap-10 py-5 shrink-0 relative z-10 border-b border-white/10 bg-black/20"
+        >
+          <button
+            class="text-sm font-extrabold uppercase tracking-[0.2em] transition-all duration-300"
+            :class="
+              activeTab === 'lyrics'
+                ? 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] scale-105'
+                : 'text-white/40 hover:text-white/80'
+            "
+            @click="activeTab = 'lyrics'"
+          >
+            Lyrics
+          </button>
+          <button
+            class="text-sm font-extrabold uppercase tracking-[0.2em] transition-all duration-300"
+            :class="
+              activeTab === 'queue'
+                ? 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] scale-105'
+                : 'text-white/40 hover:text-white/80'
+            "
+            @click="activeTab = 'queue'"
+          >
+            {{ t('player.queue') }}
+          </button>
+        </div>
+
+        <!-- Tab: Lyrics -->
+        <div
+          v-show="activeTab === 'lyrics'"
+          class="flex-1 relative w-full h-full min-h-0 lyrics-container-large"
+        >
+          <LyricsView inline />
+        </div>
+
+        <!-- Tab: Queue -->
+        <div
+          v-show="activeTab === 'queue'"
+          class="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 relative z-10 custom-scrollbar"
+        >
+          <ul v-if="player.playlist.value.length > 0" class="space-y-2">
             <li
-              v-for="(file, idx) in files"
-              :key="file"
-              class="rounded-xl px-2 py-2 flex items-center gap-3 cursor-pointer transition-colors"
+              v-for="(track, idx) in player.playlist.value"
+              :key="track.file + idx"
+              class="rounded-2xl px-4 py-3 flex items-center gap-4 cursor-pointer transition-all duration-200"
               :class="
                 idx === player.currentIndex.value
-                  ? 'bg-primary/10 text-primary'
-                  : 'hover:bg-white/5'
+                  ? 'bg-white/20 shadow-lg ring-1 ring-white/30'
+                  : 'hover:bg-white/10'
               "
               @click="onPick(idx)"
             >
               <div
-                class="relative h-9 w-9 shrink-0 rounded-lg overflow-hidden flex items-center justify-center"
-                :class="
-                  idx === player.currentIndex.value
-                    ? 'bg-primary/15'
-                    : 'bg-base-100/60'
-                "
+                class="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden flex items-center justify-center bg-black/40 shadow-inner"
               >
                 <img
-                  v-if="!coverFailed[file]"
-                  :src="coverUrlFor(file)"
-                  :alt="trackInfo(file).title"
+                  v-if="!coverFailed[track.file]"
+                  :src="track.cover"
+                  :alt="track.title"
                   class="absolute inset-0 h-full w-full object-cover"
                   loading="lazy"
-                  @error="markCoverFailed(file)"
+                  @error="markCoverFailed(track.file)"
                 />
                 <span
                   v-if="
                     idx === player.currentIndex.value && player.isPlaying.value
                   "
-                  class="relative equalizer h-3"
+                  class="relative equalizer h-5"
                   aria-hidden="true"
                 >
                   <span></span><span></span><span></span>
                 </span>
                 <Icon
-                  v-else-if="coverFailed[file]"
+                  v-else-if="coverFailed[track.file]"
                   icon="clarity:music-note-line"
-                  class="h-4 w-4 text-base-content/50"
+                  class="h-6 w-6 text-white/50"
                 />
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-sm truncate font-medium">
-                  {{ trackInfo(file).title }}
+                <p class="text-lg truncate font-bold text-white drop-shadow-md">
+                  {{ track.title }}
                 </p>
-                <p class="text-[11px] truncate text-base-content/50">
-                  {{ trackInfo(file).artist || t('common.unknownArtist') }}
+                <p
+                  class="text-sm truncate text-white/60 font-medium drop-shadow-sm mt-0.5"
+                >
+                  {{ track.artist || t('common.unknownArtist') }}
                 </p>
               </div>
             </li>
           </ul>
-
-          <div v-else class="text-center py-10">
-            <p class="text-base-content/50 text-sm">{{ t('player.empty') }}</p>
+          <div v-else class="text-center py-24">
+            <p class="text-white/50 text-xl font-semibold">
+              {{ t('player.empty') }}
+            </p>
           </div>
-        </aside>
-      </div>
+        </div>
+      </aside>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import API from '/src/model/api'
 import { usePlayer, formatTime, trackInfoFromFile } from '/src/model/player'
 import { useI18n } from '/src/i18n'
+import LyricsView from '/src/components/LyricsView.vue'
 
 const { t } = useI18n()
 const player = usePlayer()
+const router = useRouter()
 
-const files = ref([])
+const activeTab = ref('queue') // 'queue' | 'lyrics'
+
 const loading = ref(false)
 const progressBar = ref(null)
 const coverFailed = ref({})
@@ -312,12 +371,13 @@ function markCoverFailed(file) {
 async function load() {
   loading.value = true
   try {
-    const res = await API.listDownloads()
-    files.value = res.data || []
-    // If the player was empty (direct nav to /player), seed the queue
+    // If the player was completely empty, seed the playlist
     // with the library so the user has something to play.
-    if (player.playlist.value.length === 0 && files.value.length > 0) {
-      player.setPlaylist(files.value)
+    if (player.playlist.value.length === 0) {
+      const res = await API.listDownloads()
+      if (res.data && res.data.length > 0) {
+        player.setPlaylist(res.data)
+      }
     }
   } finally {
     loading.value = false
@@ -325,14 +385,7 @@ async function load() {
 }
 
 function onPick(idx) {
-  if (
-    player.playlist.value.length !== files.value.length ||
-    player.playlist.value[idx]?.file !== files.value[idx]
-  ) {
-    player.setPlaylist(files.value, { startIndex: idx })
-  } else {
-    player.playAt(idx)
-  }
+  player.playAt(idx)
 }
 
 function trackInfo(file) {
@@ -399,51 +452,95 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('pointermove', onSeekDrag)
 })
+
+const openFullscreenLyrics = () => {
+  router.push('/lyrics')
+}
 </script>
 
 <style scoped>
-.player-range {
+.player-range-large {
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.1);
-  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  height: 6px;
   border-radius: 9999px;
   outline: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
-[data-theme='downtify-light'] .player-range {
-  background: rgba(0, 0, 0, 0.1);
-}
-.player-range::-webkit-slider-thumb {
+.player-range-large::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  height: 14px;
-  width: 14px;
+  height: 20px;
+  width: 20px;
   border-radius: 9999px;
-  background: #1ad05c;
+  background: white;
   cursor: pointer;
-  box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
 }
-.player-range::-moz-range-thumb {
-  height: 14px;
-  width: 14px;
+.player-range-large::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
   border-radius: 9999px;
-  background: #1ad05c;
+  background: white;
   border: none;
   cursor: pointer;
-  box-shadow: 0 0 12px rgba(26, 208, 92, 0.45);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
 }
-.pulse-glow {
-  animation: glow 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+
+.icon-btn-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: white;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.8;
 }
-@keyframes glow {
+.icon-btn-large:hover {
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.pulse-glow-large {
+  animation: glow-large 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes glow-large {
   0%,
   100% {
-    box-shadow: 0 0 60px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.6));
+    box-shadow: 0 0 60px var(--dynamic-bg-dark, rgba(0, 0, 0, 0.5));
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 120px var(--dynamic-bg-dark, rgba(250, 35, 59, 0.95));
-    transform: scale(1.04);
+    box-shadow: 0 0 120px var(--dynamic-bg-dark, rgba(0, 0, 0, 0.8));
+    transform: scale(1.02);
   }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Ensure LyricsView scales properly inside the new massive container */
+:deep(.lyrics-inline-mode) {
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
 }
 </style>

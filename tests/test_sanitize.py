@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from downtify.downloader import _sanitize
+from hify.downloader import _sanitize
 
 
 @pytest.mark.parametrize('char', list(r'\/:*?"<>|'))

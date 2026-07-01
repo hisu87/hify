@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from downtify.downloader import Downloader
+from hify.downloader import Downloader
 
 
 def _make_downloader(tmp_path: Path) -> Downloader:

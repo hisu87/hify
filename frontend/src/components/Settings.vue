@@ -20,6 +20,7 @@
           for="settings-modal"
           class="icon-btn cursor-pointer"
           :title="t('common.close')"
+          :aria-label="t('common.close')"
         >
           <Icon icon="clarity:close-line" class="h-5 w-5" />
         </label>
@@ -60,7 +61,7 @@
               v-for="provider in sm.settingsOptions.audio_providers"
               :key="provider"
               type="button"
-              class="rounded-xl border px-3 py-2 text-sm transition-colors text-left"
+              class="rounded-xl border px-3 py-2 min-h-[44px] text-sm transition-colors text-left"
               :class="[
                 sm.settings.value.audio_providers[0] === provider
                   ? 'border-primary/50 bg-primary/10 text-primary'
@@ -229,7 +230,7 @@
               v-for="n in sm.settingsOptions.max_parallel_downloads"
               :key="n"
               type="button"
-              class="rounded-xl border px-2 py-2 text-sm font-medium transition-colors text-center"
+              class="rounded-xl border px-2 py-2 min-h-[44px] text-sm font-medium transition-colors text-center"
               :class="[
                 sm.settings.value.max_parallel_downloads === n
                   ? 'border-primary/50 bg-primary/10 text-primary'
@@ -243,6 +244,52 @@
           <p class="text-[11px] text-base-content/40 mt-1.5">
             {{ t('settings.parallelDownloadsHint') }}
           </p>
+        </div>
+
+        <!-- Playback options -->
+        <div>
+          <label
+            class="block text-xs font-semibold uppercase tracking-wider text-base-content/50 mb-2"
+          >
+            Playback Options
+          </label>
+          <div class="space-y-3">
+            <label
+              class="flex items-start gap-3 rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5 cursor-pointer hover:border-white/20"
+            >
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm checkbox-primary mt-0.5"
+                v-model="player.isAutomix.value"
+              />
+              <span class="flex-1 text-sm">
+                <span class="block">Automix</span>
+                <span class="block text-[11px] text-base-content/50">
+                  Skip the first 2.5 seconds of each track to eliminate silence.
+                </span>
+              </span>
+            </label>
+
+            <div class="flex items-center justify-between rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5">
+              <span class="flex-1 text-sm">
+                <span class="block">Crossfade</span>
+                <span class="block text-[11px] text-base-content/50">
+                  Overlap tracks by X seconds at the end.
+                </span>
+              </span>
+              <div class="flex items-center gap-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="1"
+                  v-model="player.crossfadeDuration.value"
+                  class="range range-xs range-primary w-24"
+                />
+                <span class="text-xs font-medium w-8 text-right">{{ player.crossfadeDuration.value }}s</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Save status -->
@@ -276,7 +323,7 @@
 
       <!-- Footer -->
       <div
-        class="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/5"
+        class="flex items-center justify-end gap-2 px-6 py-4 border-t border-white/5 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4"
       >
         <label
           for="settings-modal"
@@ -286,8 +333,14 @@
         </label>
         <button
           class="btn btn-primary btn-sm h-10 px-6 rounded-full"
+          :disabled="sm.isSaving.value"
           @click="sm.saveSettings()"
         >
+          <Icon
+            v-if="sm.isSaving.value"
+            icon="clarity:sync-line"
+            class="animate-spin h-4 w-4 mr-1.5"
+          />
           {{ t('common.save') }}
         </button>
       </div>
@@ -302,9 +355,11 @@
 import { Icon } from '@iconify/vue'
 import { useSettingsManager } from '../model/settings'
 import { useI18n } from '../i18n'
+import { usePlayer } from '../model/player'
 
 const sm = useSettingsManager()
 const { t, locale, setLocale, locales } = useI18n()
+const player = usePlayer()
 
 function providerLabel(provider) {
   if (provider === 'youtube-music') return 'YouTube Music'

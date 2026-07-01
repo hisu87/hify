@@ -1,13 +1,13 @@
 #!make
 
-DOWNTIFY_VERSION := 2.8.0
-TARGET := hisu87/downtify
+HIFY_VERSION := 3.3.0-stable
+TARGET := hisu87/hify
 
 all: build latest
 
 build:
 	docker buildx create --use
-	docker buildx build --platform=linux/amd64,linux/arm64 -t $(TARGET):$(DOWNTIFY_VERSION) --push .
+	docker buildx build --platform=linux/amd64,linux/arm64 -t $(TARGET):$(HIFY_VERSION) --push .
 
 latest:
 	docker buildx create --use
@@ -21,6 +21,7 @@ up:
 
 down:
 	docker compose down
+	docker rmi hify:latest
 
 run:
 	uv run python main.py web
@@ -37,7 +38,7 @@ export:
 	uv export --no-hashes --no-dev -o requirements.txt
 
 changelog:
-	github_changelog_generator -u henriquesebastiao -p downtify -o CHANGELOG --no-verbose
+	github_changelog_generator -u hisu87 -p hify -o CHANGELOG --no-verbose
 	@echo "Changelog generated at CHANGELOG"
 
 test:
@@ -46,7 +47,7 @@ test:
 
 version:
 	@VERSION=$(word 2,$(MAKECMDGOALS)); \
-	echo "Downtify version: $$VERSION"; \
+	echo "Hify version: $$VERSION"; \
 	./version.sh $$VERSION
 	npm install --prefix frontend
 	npm run build --prefix frontend

@@ -90,8 +90,8 @@ export const SpringPresets = {
   glow: { frequency: 1.5, dampingRatio: 0.9 },
   /** Dot interlude — nhanh, pop */
   dot: { frequency: 5.0, dampingRatio: 0.7 },
-  /** Scroll position — smooth cuộn */
-  scroll: { frequency: 1.2, dampingRatio: 0.85 },
+  /** Scroll position — critical damping (no bounce, fast settle) */
+  scroll: { frequency: 2.2, dampingRatio: 1.0 },
   /** Opacity fade */
   opacity: { frequency: 2.5, dampingRatio: 1.0 },
 }

@@ -4,7 +4,7 @@
 backend:
   - changed-files:
     - any-glob-to-any-file:
-      - 'downtify/**'
+      - 'hify/**'
       - 'main.py'
 
 frontend:
@@ -21,20 +21,20 @@ translation:
 download:
   - changed-files:
     - any-glob-to-any-file:
-      - 'downtify/downloader.py'
-      - 'downtify/providers.py'
-      - 'downtify/spotify.py'
+      - 'hify/downloader.py'
+      - 'hify/providers.py'
+      - 'hify/spotify.py'
 
 monitor:
   - changed-files:
     - any-glob-to-any-file:
-      - 'downtify/monitor.py'
+      - 'hify/monitor.py'
       - 'frontend/src/views/Monitor.vue'
 
 lyrics:
   - changed-files:
     - any-glob-to-any-file:
-      - 'downtify/lyrics.py'
+      - 'hify/lyrics.py'
 
 docker:
   - changed-files:

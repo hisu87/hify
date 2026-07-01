@@ -4,7 +4,7 @@ icon: lucide/list-music
 
 # M3U Export
 
-Downtify automatically generates a standard `EXTM3U` playlist file whenever a Spotify playlist is downloaded — either manually or via the [Playlist Monitor](playlist-monitor.md).
+Hify automatically generates a standard `EXTM3U` playlist file whenever a Spotify playlist is downloaded — either manually or via the [Playlist Monitor](playlist-monitor.md).
 
 ## File location
 
@@ -17,7 +17,7 @@ When *Organize by artist* is on, tracks are spread across multiple artist folder
 
 ## Relative paths
 
-Track paths inside the M3U are written **relative to the M3U file itself**, not as absolute paths. This means the same file works whether it is read from inside the Downtify container (`/downloads/…`) or from another consumer that mounts the same library at a different root — for example Jellyfin under `/nas/music/…`. Just point your media server at the same library mount and the playlist will appear as a single unit.
+Track paths inside the M3U are written **relative to the M3U file itself**, not as absolute paths. This means the same file works whether it is read from inside the Hify container (`/downloads/…`) or from another consumer that mounts the same library at a different root — for example Jellyfin under `/nas/music/…`. Just point your media server at the same library mount and the playlist will appear as a single unit.
 
 ## Enabling / disabling
 

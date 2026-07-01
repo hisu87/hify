@@ -33,6 +33,7 @@ export default {
     playlists: 'Listas',
   },
   search: {
+    submit: 'Buscar',
     placeholder: 'Busca o pega un enlace de Spotify o YouTube Music…',
     title: 'Resultados de búsqueda',
     matchesFor: 'Mostrando coincidencias para',
@@ -103,7 +104,7 @@ export default {
     checkNow: 'Revisar ahora',
     stop: 'Dejar de vigilar',
     deletePrompt: '¿Dejar de vigilar "{name}"?',
-    info: 'Al añadir una lista, Downtify descarga todas las pistas que contenga en ese momento y la sigue vigilando. Cualquier canción añadida después en Spotify se detecta y descarga automáticamente en la siguiente revisión.',
+    info: 'Al añadir una lista, Hify descarga todas las pistas que contenga en ese momento y la sigue vigilando. Cualquier canción añadida después en Spotify se detecta y descarga automáticamente en la siguiente revisión.',
     every15: 'Cada 15 min',
     every30: 'Cada 30 min',
     every1h: 'Cada hora',
@@ -139,7 +140,7 @@ export default {
   },
   settings: {
     title: 'Ajustes',
-    subtitle: 'Ajusta cómo Downtify descarga y etiqueta tu música.',
+    subtitle: 'Ajusta cómo Hify descarga y etiqueta tu música.',
     audioSource: 'Fuente de audio',
     lyricsSource: 'Fuente de letras',
     lyricsHint: 'solo lrclib está activo',

@@ -1,4 +1,4 @@
-"""FastAPI router exposed by Downtify.
+"""FastAPI router exposed by Hify.
 
 The endpoints intentionally mirror the surface that the previous
 ``spotdl``-powered backend exposed so the existing Vue frontend keeps
@@ -19,6 +19,7 @@ working without changes:
 from __future__ import annotations
 
 import asyncio
+import os
 import contextlib
 import json
 import re
@@ -36,13 +37,13 @@ from fastapi import (
 )
 from loguru import logger
 
-from . import m3u, providers, spotify
+from . import lyrics, m3u, providers, spotify
 from .downloader import Downloader
 from .monitor import PlaylistMonitorDB, check_playlist
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     'audio_providers': ['youtube-music'],
-    'lyrics_providers': ['lrclib'],
+    'lyrics_providers': ['auto'],
     'download_lyrics': True,
     'format': 'mp3',
     'bitrate': '320',
@@ -56,11 +57,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 def _effective_lyrics_providers(settings: dict[str, Any]) -> list[str]:
     if not settings.get('download_lyrics', True):
         return []
-    return [
-        p
-        for p in (settings.get('lyrics_providers') or [])
-        if isinstance(p, str) and p
-    ]
+
+    selected = settings.get('lyrics_providers') or []
+    if not selected or selected[0] == 'auto':
+        return ['netease', 'musixmatch', 'lrclib', 'amll']
+
+    return [p for p in selected if isinstance(p, str) and p]
 
 
 class ConnectionManager:
@@ -110,6 +112,7 @@ class AppState:
 
 state = AppState()
 router = APIRouter()
+_INFLIGHT_RESOLVES: dict[str, asyncio.Future] = {}
 
 
 def _load_settings(path: Path) -> dict[str, Any]:
@@ -137,6 +140,165 @@ def _save_settings(path: Path, settings: dict[str, Any]) -> None:
 @router.get('/api/version')
 def get_version() -> str:
     return state.version
+
+
+@router.get('/api/health')
+def get_health() -> dict[str, str]:
+    return {'status': 'ok'}
+
+
+@router.get('/api/v1/tracks/{id}/lyrics')
+async def get_lyrics_endpoint(id: str):
+    if id in _INFLIGHT_RESOLVES:
+        logger.debug(f'Coalescing stampede request for track {id}...')
+        return await _INFLIGHT_RESOLVES[id]
+
+    loop = asyncio.get_running_loop()
+    fut = loop.create_future()
+    _INFLIGHT_RESOLVES[id] = fut
+
+    try:
+        # TRAP 1: Hydrate track metadata from Spotify
+        track_dict = await asyncio.to_thread(spotify.track_from_id, id)
+        if not track_dict:
+            raise HTTPException(
+                status_code=404, detail='Track metadata not found'
+            )
+
+        effective_providers = _effective_lyrics_providers(state.settings)
+        provider_instances = []
+        for p in effective_providers:
+            if p == 'amll':
+                provider_instances.append(lyrics.AmllTtmlProvider())
+            elif p == 'netease':
+                provider_instances.append(lyrics.NetEaseYrcProvider())
+            elif p == 'lrclib':
+                provider_instances.append(lyrics.LrcLibProvider())
+            elif p == 'musixmatch':
+                provider_instances.append(lyrics.MusixmatchTokenProvider())
+
+        resolver = lyrics.LyricsResolver(providers=provider_instances)
+        lyrics_ast = await resolver.resolve(track_dict)
+
+        fut.set_result(lyrics_ast)
+        return lyrics_ast
+    except BaseException:
+        if not fut.done():
+            fut.cancel()
+        raise
+    finally:
+        _INFLIGHT_RESOLVES.pop(id, None)
+
+
+@router.get('/api/v1/lyrics/search')
+async def search_lyrics_endpoint(  # noqa: PLR0913
+    title: str = '',
+    artist: str = '',
+    album: str = '',
+    duration_ms: int = 0,
+    file: str = '',
+    track_id: str = '',
+):
+    key = f'search:{title}:{artist}:{album}:{duration_ms}:{file}:{track_id}'
+    if key in _INFLIGHT_RESOLVES:
+        logger.debug(f'Coalescing stampede request for search {key}...')
+        return await _INFLIGHT_RESOLVES[key]
+
+    loop = asyncio.get_running_loop()
+    fut = loop.create_future()
+    _INFLIGHT_RESOLVES[key] = fut
+
+    try:
+        from main import DOWNLOAD_DIR  # noqa: PLC0415
+
+        safe_path = None
+        if file:
+            safe_path = (DOWNLOAD_DIR.resolve() / file).resolve()
+            if not safe_path.is_relative_to(DOWNLOAD_DIR.resolve()):
+                raise HTTPException(403, 'Access Denied')
+
+        # TẦNG 1: Tìm sidecar <file>.ttml hoặc <file>.lrc local
+        if safe_path:
+            ttml_path = safe_path.with_suffix('.ttml')
+            lrc_path = safe_path.with_suffix('.lrc')
+            parsed = None
+            if ttml_path.exists():
+                text = ttml_path.read_text(encoding='utf-8')
+                parsed = lyrics.parse_amll_ttml(text)
+            elif lrc_path.exists():
+                text = lrc_path.read_text(encoding='utf-8')
+                parsed = lyrics.parse_enhanced_lrc(text)
+                
+            if parsed:
+                ast = lyrics.NormalizedLyrics(
+                    track_id=track_id,
+                    isrc=None,
+                    provider_name='local',
+                    sync_level='word' if any(line.lead for line in parsed) else 'line',
+                    lines=parsed,
+                )
+                ast.granularity = ast.sync_level
+                fut.set_result(ast)
+                return ast
+
+        # TẦNG 2: Tìm lời nhúng sẵn trong ID3 của chính file audio đó
+        if safe_path and safe_path.exists():
+            embedded_text = lyrics.extract_raw_id3_lyrics(safe_path)
+            if embedded_text:
+                parsed = lyrics.parse_enhanced_lrc(embedded_text)
+                if parsed:
+                    ast = lyrics.NormalizedLyrics(
+                        track_id=track_id,
+                        isrc=None,
+                        provider_name='id3',
+                        sync_level='word'
+                        if any(line.lead for line in parsed)
+                        else 'line',
+                        lines=parsed,
+                    )
+                    ast.granularity = ast.sync_level
+                    fut.set_result(ast)
+                    return ast
+
+        track_dict = {
+            'id': track_id,
+            'title': title,
+            'artist': artist,
+            'subtitle': artist,
+            'album': album,
+            'duration_ms': duration_ms,
+        }
+
+        effective_providers = _effective_lyrics_providers(state.settings)
+        provider_instances = []
+        for p in effective_providers:
+            if p == 'amll':
+                provider_instances.append(lyrics.AmllTtmlProvider())
+            elif p == 'netease':
+                provider_instances.append(lyrics.NetEaseYrcProvider())
+            elif p == 'lrclib':
+                provider_instances.append(lyrics.LrcLibProvider())
+            elif p == 'musixmatch':
+                provider_instances.append(lyrics.MusixmatchTokenProvider())
+
+        resolver = lyrics.LyricsResolver(providers=provider_instances)
+        lyrics_ast = await resolver.resolve(track_dict)
+
+        # TẦNG 4: Ghi sidecar ngầm
+        if lyrics_ast and safe_path:
+            if lyrics_ast.sync_level in {'word', 'syllable'}:
+                lyrics.save_sidecar_ttml(safe_path, lyrics_ast.to_ttml())
+            else:
+                lyrics.save_sidecar_lrc(safe_path, lyrics_ast.to_sidecar_lrc())
+
+        fut.set_result(lyrics_ast)
+        return lyrics_ast
+    except BaseException:
+        if not fut.done():
+            fut.cancel()
+        raise
+    finally:
+        _INFLIGHT_RESOLVES.pop(key, None)
 
 
 @router.get('/api/check_update')
@@ -171,9 +333,14 @@ def _resolve_url(url: str):
             return spotify.album_tracks_from_id(sid)
         if kind == 'playlist':
             return spotify.playlist_tracks_from_id(sid)
-    except Exception as exc:
+    except Exception:
         logger.exception('Failed to resolve Spotify URL {}', url)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        # 🛡️ SECURITY: Never expose raw exception messages to clients.
+        # Internal errors from network libs / yt-dlp can contain file
+        # paths, credentials, or detailed system info. Log server-side only.
+        raise HTTPException(
+            status_code=502, detail='Failed to resolve Spotify URL'
+        )
     raise HTTPException(
         status_code=400, detail=f'Unsupported entity type: {kind}'
     )
@@ -235,8 +402,15 @@ def _song_for_download(url: str) -> dict[str, Any]:
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
 
+import uuid
+
 def _register_job(song: dict[str, Any], status: str = 'queued') -> str:
-    song_id = str(song.get('song_id') or song.get('url') or id(song))
+    base_id = str(song.get('id') or song.get('song_id') or song.get('url') or id(song))
+    song_id = base_id
+    # Ensure unique job ID in case the same song is queued multiple times
+    while song_id in state.download_jobs:
+        song_id = f"{base_id}_{uuid.uuid4().hex[:8]}"
+        
     state.download_jobs[song_id] = {
         'song': song,
         'status': status,
@@ -311,6 +485,17 @@ async def _run_download(
     job['status'] = 'done'
     job['filename'] = filename
     job['progress'] = 100
+
+    # Save to unified relational DB
+    if hasattr(state, 'db') and state.db:
+        try:
+            # Add file_path since the downloader doesn't inject it directly to `song` dict
+            song_data = dict(song)
+            song_data['file_path'] = filename
+            state.db.save_track_metadata(song_id, song_data)
+        except Exception as e:
+            logger.error(f"Failed to save metadata to DB: {e}")
+
     await state.connections.broadcast({
         'song': song,
         'progress': 100,
@@ -330,7 +515,11 @@ async def download_endpoint(
     if state.downloader is None:
         raise HTTPException(status_code=500, detail='Downloader not ready')
 
-    song = _song_for_download(url)
+    try:
+        song = await asyncio.to_thread(_song_for_download, url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     tn_before = song.get('track_number')
     yr_before = song.get('year') or song.get('release_date')
     _merge_client_track_hints(song, client_hints)
@@ -349,8 +538,12 @@ async def download_endpoint(
 
     try:
         filename = await _run_download(song, song_id)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception:
+        # 🛡️ SECURITY: Exception messages from yt-dlp / mutagen / network
+        # libraries can contain internal paths, YouTube session tokens,
+        # or cookie values. Log the full error server-side; return an
+        # opaque message to the client.
+        raise HTTPException(status_code=500, detail='Download failed')
     return filename
 
 
@@ -377,17 +570,21 @@ async def _process_batch(
                 'Failed to resolve playlist name for {}', playlist_url
             )
 
-    async def _bounded(song: dict[str, Any], song_id: str) -> dict[str, Any]:
-        try:
-            filename = await _run_download(
-                song, song_id, subdir=playlist_subdir
-            )
-        except Exception:
-            filename = None
-        return {'song': song, 'filename': filename}
+    async def _bounded(song: dict[str, Any], song_id: str, sem: asyncio.Semaphore) -> dict[str, Any]:
+        async with sem:
+            try:
+                filename = await _run_download(
+                    song, song_id, subdir=playlist_subdir
+                )
+            except Exception:
+                filename = None
+            return {'song': song, 'filename': filename}
+
+    max_downloads = int(os.getenv('MAX_CONCURRENT_DOWNLOADS', 3))
+    sem = asyncio.Semaphore(max_downloads)
 
     results = await asyncio.gather(
-        *[_bounded(s, sid) for s, sid in zip(songs, job_ids)],
+        *[_bounded(s, sid, sem) for s, sid in zip(songs, job_ids)],
         return_exceptions=False,
     )
 
@@ -530,9 +727,13 @@ async def write_playlist_m3u_endpoint(request: Request) -> dict[str, Any]:
         playlist_name, _ = await asyncio.to_thread(
             spotify.playlist_info_and_tracks, parsed[1]
         )
-    except Exception as exc:
+    except Exception:
         logger.exception('Failed to resolve playlist {}', playlist_url)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        # 🛡️ SECURITY: Same principle as _resolve_url — keep internal
+        # error details server-side only.
+        raise HTTPException(
+            status_code=502, detail='Failed to resolve playlist'
+        )
 
     entries = [t for t in tracks if isinstance(t, dict)]
     playlist_subdir = m3u.sanitize_playlist_name(playlist_name)

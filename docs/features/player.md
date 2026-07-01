@@ -4,7 +4,7 @@ icon: lucide/headphones
 
 # Built-in Player
 
-Downtify ships with a web player so you can listen to your downloaded music without a separate app. Open it by clicking the headphones icon (🎧) in the navigation bar, or hit the play button next to any file in the Library.
+Hify ships with a web player so you can listen to your downloaded music without a separate app. Open it by clicking the headphones icon (🎧) in the navigation bar, or hit the play button next to any file in the Library.
 
 ## What's included
 
@@ -20,7 +20,7 @@ Downtify ships with a web player so you can listen to your downloaded music with
 
 The player loads every audio file found recursively inside the downloads directory. Files are served directly from the container via the `/downloads` static mount.
 
-Filenames in the format `Artist - Title.ext` are parsed so the now-playing card can show artist and title cleanly. Cover art is fetched on demand from the `/cover` endpoint, which reads the embedded image tags from the file itself — the same artwork Downtify wrote at download time.
+Filenames in the format `Artist - Title.ext` are parsed so the now-playing card can show artist and title cleanly. Cover art is fetched on demand from the `/cover` endpoint, which reads the embedded image tags from the file itself — the same artwork Hify wrote at download time.
 
 Playback uses the browser's native HTML5 audio element. No plugins, no extra processes.
 

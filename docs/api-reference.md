@@ -4,13 +4,13 @@ icon: material/api
 
 # API Reference
 
-Downtify exposes a JSON REST API used by the web UI. All endpoints are served on the same port as the web UI (default: **8000**).
+Hify exposes a JSON REST API used by the web UI. All endpoints are served on the same port as the web UI (default: **8000**).
 
 ## General
 
 ### `GET /api/version`
 
-Returns the current Downtify version as a plain string.
+Returns the current Hify version as a plain string.
 
 **Response:** `"2.6.0"`
 

@@ -66,11 +66,17 @@
         </p>
       </div>
 
-      <!-- File list -->
-      <ul v-else class="space-y-2">
+      <!-- File list (Virtual Scroller) -->
+      <RecycleScroller
+        v-else
+        class="scroller h-[70vh] pr-2 -mr-2"
+        :items="virtualFiles"
+        :item-size="80"
+        key-field="id"
+        v-slot="{ item: { file } }"
+      >
+        <div class="py-1">
         <li
-          v-for="file in paginatedFiles"
-          :key="file"
           class="surface rounded-2xl p-3 sm:p-4 flex items-center gap-3"
         >
           <!-- Cover thumb -->
@@ -93,7 +99,7 @@
             <span class="text-sm font-medium truncate block">{{
               displayName(file)
             }}</span>
-            <span class="text-xs text-base-content/40">
+            <span class="text-xs text-base-content/40 truncate block">
               <span v-if="folderOf(file)" class="mr-2 text-primary/70">
                 <Icon
                   icon="clarity:folder-line"
@@ -136,43 +142,8 @@
             </button>
           </div>
         </li>
-      </ul>
-
-      <!-- Pagination -->
-      <nav
-        v-if="totalPages > 1"
-        class="mt-8 flex items-center justify-center gap-1 flex-wrap"
-      >
-        <button
-          class="icon-btn"
-          :disabled="currentPage === 1"
-          @click="currentPage--"
-          :title="t('common.previousPage')"
-        >
-          <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
-        </button>
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          class="h-10 min-w-[2.5rem] rounded-full px-3 text-sm font-medium transition-colors"
-          :class="
-            page === currentPage
-              ? 'bg-primary text-primary-content shadow-glow-sm'
-              : 'text-base-content/70 hover:text-base-content hover:bg-white/10'
-          "
-          @click="currentPage = page"
-        >
-          {{ page }}
-        </button>
-        <button
-          class="icon-btn"
-          :disabled="currentPage === totalPages"
-          @click="currentPage++"
-          :title="t('common.nextPage')"
-        >
-          <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
-        </button>
-      </nav>
+        </div>
+      </RecycleScroller>
 
       <!-- Count footer -->
       <p
@@ -204,29 +175,21 @@ const player = usePlayer()
 const router = useRouter()
 
 const files = ref([])
+const virtualFiles = computed(() => files.value.map((f, i) => ({ id: typeof f === 'object' ? f.id || i : f, file: f })))
 const loading = ref(false)
 const error = ref('')
 const deleting = ref({})
 const coverFailed = ref({})
-const currentPage = ref(1)
-
-const totalPages = computed(() => Math.ceil(files.value.length / PAGE_SIZE))
-
-const paginatedFiles = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  return files.value.slice(start, start + PAGE_SIZE)
-})
-
-watch(files, () => {
-  currentPage.value = 1
-})
 
 function coverUrlFor(file) {
-  return API.coverFileURL(file)
+  if (typeof file === 'object' && file.cover_url) return file.cover_url
+  const name = typeof file === 'string' ? file : file.file || ''
+  return API.coverFileURL(name)
 }
 
 function markCoverFailed(file) {
-  coverFailed.value = { ...coverFailed.value, [file]: true }
+  const name = typeof file === 'string' ? file : file.file || ''
+  coverFailed.value = { ...coverFailed.value, [name]: true }
 }
 
 async function refresh() {
@@ -243,31 +206,36 @@ async function refresh() {
 }
 
 async function onDelete(file) {
-  if (!confirm(t('library.deletePrompt', { file }))) return
-  deleting.value = { ...deleting.value, [file]: true }
+  const name = typeof file === 'string' ? file : file.file
+  if (!confirm(t('library.deletePrompt', { file: name }))) return
+  deleting.value = { ...deleting.value, [name]: true }
   try {
-    await API.deleteDownload(file)
-    files.value = files.value.filter((f) => f !== file)
+    await API.deleteDownload(name)
+    files.value = files.value.filter((f) => (typeof f === 'string' ? f : f.file) !== name)
   } catch {
-    error.value = t('library.failedDelete', { file })
+    error.value = t('library.failedDelete', { file: name })
   } finally {
-    deleting.value = { ...deleting.value, [file]: false }
+    deleting.value = { ...deleting.value, [name]: false }
   }
 }
 
 function formatExt(file) {
-  const dot = file.lastIndexOf('.')
-  return dot > 0 ? file.slice(dot + 1).toUpperCase() : ''
+  const name = typeof file === 'string' ? file : file.file || ''
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(dot + 1).toUpperCase() : ''
 }
 
 function displayName(file) {
-  const slash = file.lastIndexOf('/')
-  return slash >= 0 ? file.slice(slash + 1) : file
+  if (typeof file === 'object' && file.title) return file.title
+  const name = typeof file === 'string' ? file : file.file || ''
+  const slash = name.lastIndexOf('/')
+  return slash >= 0 ? name.slice(slash + 1) : name
 }
 
 function folderOf(file) {
-  const slash = file.lastIndexOf('/')
-  return slash >= 0 ? file.slice(0, slash) : ''
+  const name = typeof file === 'string' ? file : file.file || ''
+  const slash = name.lastIndexOf('/')
+  return slash >= 0 ? name.slice(0, slash) : ''
 }
 
 function playFile(index) {

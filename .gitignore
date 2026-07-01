@@ -299,7 +299,10 @@ typings/
 
 # TernJS port file
 .tern-port
-data/downtify_monitor.db
+data/hify_monitor.db
 data/settings.json
 
 .claude/
+frontend/dist/
+data/*
+.env.example

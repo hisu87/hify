@@ -5,6 +5,7 @@ import Download from '/src/views/Download.vue'
 import List from '/src/views/Downloads.vue'
 import Monitor from '/src/views/Monitor.vue'
 import Player from '/src/views/Player.vue'
+import Lyrics from '/src/views/Lyrics.vue'
 import config from '/src/config'
 
 const routes = [
@@ -37,6 +38,11 @@ const routes = [
     path: '/player',
     name: 'Player',
     component: Player,
+  },
+  {
+    path: '/lyrics',
+    name: 'Lyrics',
+    component: Lyrics,
   },
 ]
 

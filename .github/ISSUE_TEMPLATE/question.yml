@@ -1,11 +1,11 @@
 name: Question
-description: Ask a question about Downtify setup, usage, or configuration
+description: Ask a question about Hify setup, usage, or configuration
 labels: ["question"]
 body:
   - type: markdown
     attributes:
       value: |
-        Before opening a question, please check the [README](https://github.com/henriquesebastiao/downtify#readme) and existing issues — your answer may already be there.
+        Before opening a question, please check the [README](https://github.com/hisu87/hify#readme) and existing issues — your answer may already be there.
 
   - type: textarea
     id: question
@@ -26,10 +26,10 @@ body:
   - type: input
     id: version
     attributes:
-      label: Downtify Version
+      label: Hify Version
       description: |
-        Which version of Downtify are you running? Run:
-        `docker inspect henriquesebastiao/downtify --format '{{index .Config.Labels "org.opencontainers.image.version"}}'`
+        Which version of Hify are you running? Run:
+        `docker inspect hisu87/hify --format '{{index .Config.Labels "org.opencontainers.image.version"}}'`
       placeholder: "e.g. 2.5.0"
     validations:
       required: false
@@ -38,7 +38,7 @@ body:
     id: deployment
     attributes:
       label: Deployment Method
-      description: How are you running Downtify?
+      description: How are you running Hify?
       options:
         - Docker CLI (docker run)
         - Docker Compose

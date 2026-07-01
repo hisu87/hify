@@ -4,7 +4,7 @@ icon: lucide/sparkles
 
 # Features
 
-Downtify covers everything you need to build and maintain a local music library from Spotify.
+Hify covers everything you need to build and maintain a local music library from Spotify.
 
 ## Overview
 
@@ -20,7 +20,7 @@ Downtify covers everything you need to build and maintain a local music library 
 
 ## Input types
 
-Downtify accepts several input types in the search bar:
+Hify accepts several input types in the search bar:
 
 | Input | Example |
 |-------|---------|

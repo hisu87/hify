@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       # So that this workflow only runs when code within the target module is modified
-      - 'downtify/**'
+      - 'hify/**'
   workflow_dispatch:
 
 concurrency:
@@ -24,7 +24,7 @@ jobs:
     
     steps:
       - name: 🛎️ Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: 🐍 Setup UV

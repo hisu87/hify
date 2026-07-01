@@ -47,6 +47,19 @@ function search(query) {
   return API.get('/api/songs/search', { params: { query } })
 }
 
+function searchTrackLyrics(
+  title,
+  artist,
+  album = '',
+  duration_ms = 0,
+  file = '',
+  track_id = ''
+) {
+  return API.get('/api/v1/lyrics/search', {
+    params: { title, artist, album, duration_ms, file, track_id },
+  }).then((res) => res.data)
+}
+
 function open(songURL) {
   return API.get('/api/song/url', { params: { url: songURL } })
 }
@@ -118,6 +131,10 @@ function setSettings(settings) {
   })
 }
 
+function getTrackLyrics(trackId) {
+  return API.get(`/api/v1/tracks/${trackId}/lyrics`).then((res) => res.data)
+}
+
 function ws_onmessage(fn) {
   return (wsConnection.onmessage = fn)
 }
@@ -141,6 +158,8 @@ export default {
   getSettings,
   setSettings,
   check_for_update,
+  getTrackLyrics,
+  searchTrackLyrics,
   ws_onmessage,
   ws_onerror,
   getVersion,

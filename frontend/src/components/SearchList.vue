@@ -3,7 +3,10 @@
     <!-- Header -->
     <div class="mb-8">
       <h1 class="text-2xl font-bold tracking-tight">{{ t('search.title') }}</h1>
-      <p class="mt-1 text-sm text-base-content/60">
+      <div class="mt-5 mb-4 w-full max-w-xl">
+        <SearchInput />
+      </div>
+      <p class="text-sm text-base-content/60">
         <template v-if="sm.searchTerm.value">
           {{ t('search.matchesFor') }}
           <span class="text-base-content/90 font-medium">
@@ -113,6 +116,7 @@
             target="_blank"
             rel="noopener"
             :title="t('search.openOnSpotify')"
+            :aria-label="t('search.openOnSpotify')"
           >
             <Icon icon="clarity:pop-out-line" class="h-4 w-4" />
           </a>
@@ -121,6 +125,7 @@
             v-if="downloadState(song) === 'queued'"
             class="icon-btn text-primary cursor-default"
             :title="t('search.inQueue')"
+            :aria-label="t('search.inQueue')"
             disabled
           >
             <Icon icon="clarity:check-circle-line" class="h-5 w-5" />
@@ -130,6 +135,7 @@
             class="icon-btn text-primary hover:bg-primary/10"
             @click="download(song)"
             :title="t('search.download')"
+            :aria-label="t('search.download')"
           >
             <Icon icon="clarity:download-line" class="h-5 w-5" />
           </button>
@@ -147,6 +153,7 @@
         :disabled="currentPage === 1"
         @click="currentPage--"
         :title="t('search.previousPage')"
+        :aria-label="t('search.previousPage')"
       >
         <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-[-90deg]" />
       </button>
@@ -168,6 +175,7 @@
         :disabled="currentPage === totalPages"
         @click="currentPage++"
         :title="t('search.nextPage')"
+        :aria-label="t('search.nextPage')"
       >
         <Icon icon="clarity:angle-line" class="h-4 w-4 rotate-90" />
       </button>
@@ -182,6 +190,7 @@ import { Icon } from '@iconify/vue'
 import { useSearchManager } from '../model/search'
 import { useProgressTracker, useDownloadManager } from '../model/download'
 import { useI18n } from '../i18n'
+import SearchInput from './SearchInput.vue'
 
 const PAGE_SIZE = 5
 

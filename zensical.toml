@@ -1,17 +1,17 @@
 # ============================================================================
-# Downtify Documentation — zensical.toml
+# Hify Documentation — zensical.toml
 # ============================================================================
 
 [project]
 
-site_name        = "Downtify"
+site_name        = "Hify"
 site_description = "Self-hosted music downloader. Paste a Spotify link, get a perfectly tagged audio file — no API keys, no account, no hassle."
 site_author      = "Henrique Sebastião"
-site_url         = "https://henriquesebastiao.github.io/downtify/"
+site_url         = "http://hisu87.me/Hify/"
 copyright        = "Copyright &copy; 2024 – 2026 Henrique Sebastião"
 
-repo_url  = "https://github.com/henriquesebastiao/downtify"
-repo_name = "henriquesebastiao/downtify"
+repo_url  = "https://github.com/hisu87/Hify"
+repo_name = "hisu87/Hify"
 edit_uri  = "edit/main/docs-src/docs/"
 
 extra_css = ["stylesheets/extra.css"]
@@ -97,12 +97,12 @@ toggle.name = "Switch to light mode"
 # ----------------------------------------------------------------------------
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
-link = "https://github.com/henriquesebastiao/downtify"
+link = "https://github.com/hisu87/Hify"
 name = "GitHub"
 
 [[project.extra.social]]
 icon = "fontawesome/brands/docker"
-link = "https://hub.docker.com/r/henriquesebastiao/downtify"
+link = "https://hub.docker.com/r/hisu87/Hify"
 name = "Docker Hub"
 
 # ----------------------------------------------------------------------------

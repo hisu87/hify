@@ -22,7 +22,7 @@ body:
       label: Steps to Reproduce
       description: List the exact steps needed to reproduce the issue.
       placeholder: |
-        1. Open Downtify at http://localhost:8000
+        1. Open Hify at http://localhost:8000
         2. Paste this Spotify link: ...
         3. Click Download
         4. See error / unexpected behavior
@@ -48,11 +48,11 @@ body:
   - type: input
     id: version
     attributes:
-      label: Downtify Version
+      label: Hify Version
       description: |
-        Which version of Downtify are you running?
+        Which version of Hify are you running?
         You can find it in the bottom of the web UI or by running:
-        `docker inspect henriquesebastiao/downtify --format '{{index .Config.Labels "org.opencontainers.image.version"}}'`
+        `docker inspect hisu87/hify --format '{{index .Config.Labels "org.opencontainers.image.version"}}'`
       placeholder: "e.g. 2.5.0"
     validations:
       required: true
@@ -61,7 +61,7 @@ body:
     id: deployment
     attributes:
       label: Deployment Method
-      description: How are you running Downtify?
+      description: How are you running Hify?
       options:
         - Docker CLI (docker run)
         - Docker Compose
@@ -105,12 +105,12 @@ body:
 
         **Docker CLI:**
         ```
-        docker logs downtify --tail 100
+        docker logs hify --tail 100
         ```
 
         **Docker Compose:**
         ```
-        docker compose logs downtify --tail 100
+        docker compose logs hify --tail 100
         ```
 
         Add `--since 5m` to limit to the last 5 minutes if the log is too large.
@@ -147,5 +147,5 @@ body:
       options:
         - label: I searched existing issues and this has not been reported before.
           required: true
-        - label: I am using the latest version of Downtify.
+        - label: I am using the latest version of Hify.
           required: false

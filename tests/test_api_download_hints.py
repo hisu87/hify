@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from downtify.api import _merge_client_track_hints
+from hify.api import _merge_client_track_hints
 
 
 def test_merge_applies_track_index_and_dates():

@@ -20,17 +20,17 @@ if (Get-Command uv -ErrorAction SilentlyContinue) {
 }
 
 # 3. Clean up existing container if it exists
-Write-Host "=== Cleaning up existing downtify-local container ===" -ForegroundColor Cyan
-$existing = docker ps -a --filter "name=downtify-local" --format "{{.Names}}"
-if ($existing -eq "downtify-local") {
+Write-Host "=== Cleaning up existing hify-local container ===" -ForegroundColor Cyan
+$existing = docker ps -a --filter "name=hify-local" --format "{{.Names}}"
+if ($existing -eq "hify-local") {
     Write-Host "Stopping and removing existing container..."
-    docker stop downtify-local
-    docker rm downtify-local
+    docker stop hify-local
+    docker rm hify-local
 }
 
 # 4. Build local Docker image
-Write-Host "=== Building Docker image (downtify:local) ===" -ForegroundColor Cyan
-docker build -t downtify:local .
+Write-Host "=== Building Docker image (hify:local) ===" -ForegroundColor Cyan
+docker build -t hify:local .
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Docker build failed!"
     exit 1
@@ -44,10 +44,10 @@ $null = New-Item -ItemType Directory -Force -Path ./docker/data
 # 6. Run container
 Write-Host "=== Running Docker container ===" -ForegroundColor Cyan
 docker run -d `
-  --name downtify-local `
+  --name hify-local `
   -p 8000:8000 `
   -v "${PWD}/docker/downloads:/downloads" `
   -v "${PWD}/docker/data:/data" `
-  downtify:local
+  hify:local
 
-Write-Host "`n=== Success! Downtify is running at http://localhost:8000 ===" -ForegroundColor Green
+Write-Host "`n=== Success! Hify is running at http://localhost:8000 ===" -ForegroundColor Green

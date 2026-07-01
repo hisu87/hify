@@ -1,10 +1,36 @@
 @import url('https://rsms.me/inter/inter.css');
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Be+Vietnam+Pro:ital,wght@0,400;0,700;1,400&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;1,6..96,400&family=Bungee&family=Caveat:wght@400;700&family=Cinzel:wght@400;700&family=Comfortaa:wght@400;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@400;700&family=Inter:wght@400;700&family=Lexend:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Pacifico&family=Patrick+Hand&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,700;1,400&family=Prata&family=Space+Grotesk:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap&subset=vietnamese');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@property --dynamic-bg-light {
+  syntax: '<color>';
+  initial-value: transparent;
+  inherits: true;
+}
+
+@property --dynamic-bg-dark {
+  syntax: '<color>';
+  initial-value: transparent;
+  inherits: true;
+}
+
+@property --dynamic-highlight {
+  syntax: '<color>';
+  initial-value: transparent;
+  inherits: true;
+}
+
 @layer base {
+  :root {
+    transition:
+      --dynamic-bg-light 1s ease-out,
+      --dynamic-bg-dark 1s ease-out,
+      --dynamic-highlight 1s ease-out;
+  }
+
   html,
   body {
     @apply bg-base-300 text-base-content antialiased;
@@ -28,7 +54,7 @@
     min-height: 100dvh;
   }
 
-  [data-theme='downtify-light'] body {
+  [data-theme='hify-light'] body {
     /* No longer using radial gradient */
   }
 
@@ -56,7 +82,7 @@
     background: rgba(26, 208, 92, 0.45);
   }
 
-  [data-theme='downtify-light'] ::-webkit-scrollbar-thumb {
+  [data-theme='hify-light'] ::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.12);
   }
 }
@@ -66,7 +92,7 @@
     @apply bg-base-100/30 backdrop-blur-lg border border-white/5;
   }
 
-  [data-theme='downtify-light'] .surface {
+  [data-theme='hify-light'] .surface {
     @apply bg-white/40 border-black/5 backdrop-blur-lg;
   }
 
@@ -74,7 +100,7 @@
     @apply bg-base-100/40 backdrop-blur-lg border border-white/10;
   }
 
-  [data-theme='downtify-light'] .surface-strong {
+  [data-theme='hify-light'] .surface-strong {
     @apply bg-white/50 backdrop-blur-lg border-black/10;
   }
 
@@ -85,7 +111,7 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
-  [data-theme='downtify-light'] .glass-nav {
+  [data-theme='hify-light'] .glass-nav {
     background: rgba(255, 255, 255, 0.72);
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   }
@@ -97,7 +123,7 @@
     border-right: 1px solid rgba(255, 255, 255, 0.04);
   }
 
-  [data-theme='downtify-light'] .glass-sidebar {
+  [data-theme='hify-light'] .glass-sidebar {
     background: rgba(255, 255, 255, 0.35);
     border-right: 1px solid rgba(0, 0, 0, 0.04);
   }
@@ -109,7 +135,7 @@
     border-top: 1px solid rgba(255, 255, 255, 0.05);
   }
 
-  [data-theme='downtify-light'] .glass-player-bar {
+  [data-theme='hify-light'] .glass-player-bar {
     background: rgba(255, 255, 255, 0.45);
     border-top: 1px solid rgba(0, 0, 0, 0.05);
   }
@@ -118,10 +144,10 @@
     transition-property: transform, background-color, color, box-shadow;
     transition-duration: 300ms;
     transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
-    @apply inline-flex h-10 w-10 items-center justify-center rounded-full text-base-content/80 hover:bg-white/10 hover:text-base-content active:scale-95;
+    @apply inline-flex h-11 w-11 items-center justify-center rounded-full text-base-content/80 hover:bg-white/10 hover:text-base-content active:scale-95;
   }
 
-  [data-theme='downtify-light'] .icon-btn {
+  [data-theme='hify-light'] .icon-btn {
     @apply hover:bg-black/5;
   }
 
@@ -133,7 +159,7 @@
     @apply flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-base-content/70 transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] hover:bg-white/10 hover:text-base-content active:scale-95;
   }
 
-  [data-theme='downtify-light'] .apple-nav-item {
+  [data-theme='hify-light'] .apple-nav-item {
     @apply hover:bg-black/5;
   }
 
@@ -159,7 +185,7 @@
     background: rgba(255, 255, 255, 0.12);
   }
 
-  [data-theme='downtify-light'] .player-range::-webkit-slider-runnable-track {
+  [data-theme='hify-light'] .player-range::-webkit-slider-runnable-track {
     background: rgba(0, 0, 0, 0.12);
   }
 
@@ -180,7 +206,7 @@
     background: rgba(255, 255, 255, 0.12);
   }
 
-  [data-theme='downtify-light'] .player-range::-moz-range-track {
+  [data-theme='hify-light'] .player-range::-moz-range-track {
     background: rgba(0, 0, 0, 0.12);
   }
 
@@ -206,7 +232,7 @@
     @apply w-full h-12 rounded-full bg-base-100/85 border border-white/10 px-5 pr-14 text-base-content placeholder:text-base-content/40 outline-none transition focus:border-primary/60 focus:shadow-glow-sm;
   }
 
-  [data-theme='downtify-light'] .input-modern {
+  [data-theme='hify-light'] .input-modern {
     @apply bg-white border-black/10;
   }
 
@@ -214,7 +240,7 @@
     @apply relative flex items-center gap-4 rounded-2xl p-3 sm:p-4 transition-all duration-200 hover:bg-white/5;
   }
 
-  [data-theme='downtify-light'] .track-card {
+  [data-theme='hify-light'] .track-card {
     @apply hover:bg-black/5;
   }
 
@@ -234,7 +260,7 @@
     @apply pill bg-white/5 text-base-content/70 border border-white/10;
   }
 
-  [data-theme='downtify-light'] .badge-neutral-soft {
+  [data-theme='hify-light'] .badge-neutral-soft {
     @apply bg-black/5 border-black/10;
   }
 
@@ -266,7 +292,7 @@
     @apply animate-pulse rounded-xl bg-white/10;
   }
 
-  [data-theme='downtify-light'] .skeleton {
+  [data-theme='hify-light'] .skeleton {
     @apply bg-black/10;
   }
 }

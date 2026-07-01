@@ -1,15 +1,16 @@
 services:
-  downtify-hisu:
-    container_name: downtify-hisu
-    image: ghcr.io/hisu87/downtify:latest
+  hify-hisu:
+    container_name: hify-hisu
+    build: .
+    image: ghcr.io/hisu87/hify:latest
     restart: unless-stopped
     ports:
       - '8000:30321'
     volumes:
-      - /DATA/Downloads/downtify:/downloads
-      - /DATA/AppData/downtify/data:/data
+      - /DATA/Downloads/hify:/downloads
+      - /DATA/AppData/hify/data:/data
     environment:
-      - DOWNTIFY_PORT=30321
+      - HIFY_PORT=30321
     dns:
       - 1.1.1.1
       - 1.0.0.1
@@ -19,17 +20,17 @@ x-casaos:
     - amd64
     - arm64
     - arm
-  main: downtify-hisu
+  main: hify-hisu
   description:
     en_us: Download your Spotify playlists and songs along with album art and metadata in a self-hosted way.
   tagline:
     en_us: Self-hosted Spotify downloader (Hisu87 fork)
   developer: Hisu87
   author: Hisu87
-  icon: https://raw.githubusercontent.com/hisu87/downtify/main/frontend/src/assets/downtify.svg
+  icon: https://raw.githubusercontent.com/hisu87/hify/main/frontend/src/assets/hify.svg
   thumbnail: ""
   title:
-    en_us: Downtify (Hisu87)
+    en_us: Hify (Hisu87)
   category: Music
   version: 2.8.0
   port_map: "8000"
@@ -39,9 +40,9 @@ x-casaos:
       target: /downloads
       description:
         en_us: Downloads folder
-      source: /DATA/Downloads/downtify
+      source: /DATA/Downloads/hify
     - type: bind
       target: /data
       description:
         en_us: Data folder
-      source: /DATA/AppData/downtify/data
+      source: /DATA/AppData/hify/data

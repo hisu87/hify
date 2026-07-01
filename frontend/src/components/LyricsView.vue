@@ -1,15 +1,19 @@
 <template>
   <transition name="lyrics-modal">
     <div
-      v-if="isOpen"
-      class="lyrics-root fixed inset-0 z-[100] flex flex-col overflow-hidden"
+      v-if="isOpen || inline"
+      :class="
+        inline
+          ? 'lyrics-root relative h-full flex flex-col overflow-hidden lyrics-inline-mode'
+          : 'lyrics-root fixed inset-0 z-[100] flex flex-col overflow-hidden'
+      "
+      @touchstart="onTouchStart"
+      @touchend="onTouchEnd"
+      @mouseup="cancelScrub"
+      @touchend.passive="cancelScrub"
     >
-      <!-- ─── Background (blurred album art) ─── -->
-      <div class="lyrics-bg" :style="bgStyle"></div>
-      <div class="lyrics-bg-overlay"></div>
-
       <!-- ─── Top Nav ─── -->
-      <div class="lyrics-nav">
+      <div v-if="!inline" class="lyrics-nav">
         <button
           class="icon-btn"
           @click="close"
@@ -37,48 +41,113 @@
 
         <!-- No lyrics -->
         <div v-else-if="!parsedLyrics.length" class="lyrics-state opacity-40">
-          No synced lyrics available.
+          <p>No synced lyrics available.</p>
         </div>
 
         <!-- Lyrics list -->
         <div
           v-else
           class="lyrics-list"
-          :style="{ transform: `translate3d(0, ${scrollY}px, 0)` }"
+          :style="{
+            transform: `translate3d(0, ${scrollY}px, 0)`,
+            fontFamily: `'${currentFont}', sans-serif`,
+          }"
         >
-          <!-- Spacer: đẩy dòng đầu ra giữa màn -->
-          <div :style="{ height: topPad + 'px' }"></div>
+          <!-- Top Spacer -->
+          <div :style="{ height: topPad + topSpacerHeight + 'px' }"></div>
 
           <div
-            v-for="(line, li) in parsedLyrics"
-            :key="li"
-            class="lyric-line"
-            :class="getLineClass(li)"
-            :ref="(el) => registerLineEl(li, el)"
-            @click="player.seek(line.time)"
+            v-for="item in visibleLines"
+            :key="item.index"
+            class="lyric-line flex-col"
+            :class="[
+              getLineClass(item.index),
+              `agent-${item.line.agent_id || 'default'}`,
+              {
+                'scrubbing-active': isScrubbing && scrubLineIdx === item.index,
+                'scrubbing-dimmed': isScrubbing && scrubLineIdx !== item.index,
+                active: item.index === activeLineIdx,
+                passed: item.index < activeLineIdx,
+                future: item.index > activeLineIdx,
+              },
+            ]"
+            :ref="(el) => registerLineEl(item.index, el)"
+            @mousedown="onLineDown(item.index)"
+            @touchstart="onLineDown(item.index)"
+            @click="onLineClick(item.index, item.line.startTime)"
           >
-            <!-- Instrument / empty line -->
-            <span v-if="!line.words.length" class="lyric-instrument">♪</span>
-
-            <!-- Words -->
-            <span
-              v-for="(word, wi) in line.words"
-              :key="wi"
-              class="lyric-word"
-              :ref="(el) => registerWordEl(li, wi, el)"
+            <!-- Scrub indicator -->
+            <div
+              v-if="isScrubbing && scrubLineIdx === item.index"
+              class="scrub-indicator"
             >
-              <!-- Faded base layer -->
-              <span class="word-base">{{ word.text }}</span>
-              <!-- Wrapper for highlight layer to apply drop-shadow without clipping -->
-              <span class="word-hl-wrapper">
-                <!-- Animated highlight layer — filled by --fill-pct CSS var -->
-                <span class="word-hl">{{ word.text }}</span>
-              </span>
+              <Icon icon="ph:play-fill" class="h-4 w-4 mr-2" />
+            </div>
+
+            <!-- Instrument / empty line -->
+            <span
+              v-if="item.line.isInstrumental || (!item.line.words?.length && syncType === 'word')"
+              class="lyric-instrument"
+            >
+              {{ item.line.isInstrumental ? '• • •' : '♪' }}
             </span>
+
+            <!-- Lead Line (Line-level sync) -->
+            <div
+              v-if="
+                syncType === 'line' ||
+                (!item.line.words?.length && !item.line.isInstrumental)
+              "
+              class="lead-line-text flex flex-wrap"
+              :class="[
+                getAlignClass(item.index),
+                {
+                  'is-active': item.index === activeLineIdx,
+                  'is-past': item.index < activeLineIdx,
+                },
+              ]"
+            >
+              {{ item.line.rawText }}
+            </div>
+
+            <!-- Lead Words -->
+            <div
+              v-else-if="item.line.words?.length"
+              class="lead-words flex flex-wrap"
+              :class="getAlignClass(item.index)"
+            >
+              <span
+                v-for="(word, wi) in item.line.words"
+                :key="'lead-' + wi"
+                class="lyric-word"
+                :data-text="word.text"
+                :ref="(el) => registerWordEl(item.index, wi, el, false)"
+              >
+                {{ word.text }}
+              </span>
+            </div>
+
+            <!-- Background Words -->
+            <div
+              v-if="item.line.background"
+              class="bg-words flex flex-wrap scale-75 opacity-70 mt-1"
+              :class="getAlignClass(item.index)"
+            >
+              <span
+                v-for="(word, wi) in item.line.background"
+                :key="'bg-' + wi"
+                class="lyric-word"
+                :data-has-space="word.isTrailingSpace"
+                :data-text="word.text"
+                :ref="(el) => registerWordEl(item.index, wi, el, true)"
+              >
+                {{ word.text }}
+              </span>
+            </div>
           </div>
 
           <!-- Bottom spacer -->
-          <div :style="{ height: botPad + 'px' }"></div>
+          <div :style="{ height: botPad + bottomSpacerHeight + 'px' }"></div>
         </div>
       </div>
     </div>
@@ -89,12 +158,66 @@
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { usePlayer } from '../model/player'
-import { parseLrc } from '../utils/lyrics/LrcParser.js'
+import api from '../model/api'
 import { LyricsAnimator } from '../utils/lyrics/LyricsAnimator.js'
+import { parseTtml } from '../utils/lyrics/TtmlParser.js'
 
 // ─── Props / Emits ────────────────────────────────────────────────────────────
-const props = defineProps({ isOpen: Boolean })
+const props = defineProps({
+  isOpen: Boolean,
+  inline: { type: Boolean, default: false },
+})
 const emit = defineEmits(['close'])
+
+// ─── Fonts ────────────────────────────────────────────────────────────────────
+const LYRIC_FONTS = [
+  'Be Vietnam Pro',
+  'Inter',
+  'Plus Jakarta Sans',
+  'Lexend',
+  'Playfair Display',
+  'Lora',
+  'Bodoni Moda',
+  'Cinzel',
+  'Patrick Hand',
+  'Dancing Script',
+  'Pacifico',
+  'Caveat',
+  'Anton',
+  'Alfa Slab One',
+  'Bungee',
+  'Space Grotesk',
+  'Space Mono',
+  'Courier Prime',
+  'Comfortaa',
+  'Prata',
+]
+
+const currentFont = ref('Inter')
+
+function updateFontForTrack(track) {
+  if (!track) {
+    currentFont.value = 'Inter'
+    return
+  }
+  const genre = (track.genre || '').toLowerCase()
+  let validGroups = []
+
+  if (/(rap|hip-hop|hip hop|dance)/.test(genre)) {
+    validGroups = [0, 3] // Groups 1 & 4
+  } else if (/(r&b|soul|ballad)/.test(genre)) {
+    validGroups = [1, 2] // Groups 2 & 3
+  } else if (/(pop|indie)/.test(genre)) {
+    validGroups = [0, 1, 2, 3, 4] // All groups
+  } else {
+    validGroups = [0, 1, 2, 3, 4]
+  }
+
+  const chosenGroup =
+    validGroups[Math.floor(Math.random() * validGroups.length)]
+  const fontInGroup = Math.floor(Math.random() * 4)
+  currentFont.value = LYRIC_FONTS[chosenGroup * 4 + fontInGroup]
+}
 
 // ─── Player ───────────────────────────────────────────────────────────────────
 const player = usePlayer()
@@ -104,6 +227,7 @@ const currentTrack = computed(() => player.currentTrack.value)
 const loading = ref(false)
 const error = ref('')
 const parsedLyrics = ref([])
+const syncType = ref('word')
 
 // Scroll
 const scrollerEl = ref(null)
@@ -112,13 +236,68 @@ const topPad = ref(200)
 const botPad = ref(300)
 const activeLineIdx = ref(-1)
 
+// Virtualization
+const estimatedLineHeight = 80
+const measuredHeights = new Map()
+const visibleStartIndex = computed(() => Math.max(0, activeLineIdx.value - 4))
+const visibleEndIndex = computed(() =>
+  Math.min(parsedLyrics.value.length, activeLineIdx.value + 6)
+)
+const visibleLines = computed(() => {
+  if (parsedLyrics.value.length === 0) return []
+  return parsedLyrics.value
+    .slice(visibleStartIndex.value, visibleEndIndex.value)
+    .map((l, i) => ({ line: l, index: visibleStartIndex.value + i }))
+})
+
+const topSpacerHeight = computed(() => {
+  let h = 0
+  for (let i = 0; i < visibleStartIndex.value; i++) {
+    h += measuredHeights.get(i) || estimatedLineHeight
+  }
+  return h
+})
+
+const bottomSpacerHeight = computed(() => {
+  let h = 0
+  for (let i = visibleEndIndex.value; i < parsedLyrics.value.length; i++) {
+    h += measuredHeights.get(i) || estimatedLineHeight
+  }
+  return h
+})
+
+// Scrubbing
+const isScrubbing = ref(false)
+const scrubLineIdx = ref(-1)
+
+function onLineDown(li) {
+  isScrubbing.value = true
+  scrubLineIdx.value = li
+}
+
+function cancelScrub() {
+  if (isScrubbing.value) {
+    // Delay slightly to let click register
+    setTimeout(() => {
+      isScrubbing.value = false
+      scrubLineIdx.value = -1
+    }, 100)
+  }
+}
+
+function onLineClick(li, time) {
+  player.seek(time)
+  isScrubbing.value = false
+  scrubLineIdx.value = -1
+}
+
 // ─── Lyrics cache ─────────────────────────────────────────────────────────────
 const lyricsCache = new Map()
 const lyricsRequests = new Map()
 
 // ─── Animator ─────────────────────────────────────────────────────────────────
 const animator = new LyricsAnimator()
-animator.getTime = () => player.currentTime.value
+animator.audioElement = player.getAudio()
 animator.isPlaying = () => player.isPlaying.value
 
 // Line element refs
@@ -127,16 +306,20 @@ const lineElMap = new Map()
 animator.onFrame = ({ activeLineIdx: ali, scrollSpringPos }) => {
   if (ali !== activeLineIdx.value) {
     activeLineIdx.value = ali
-    updateScrollGoal(ali)
+    if (!isScrubbing.value) {
+      updateScrollGoal(ali)
+    }
   }
-  scrollY.value = scrollSpringPos
+  if (!isScrubbing.value) {
+    scrollY.value = scrollSpringPos
+  }
 }
 
-function registerWordEl(li, wi, el) {
+function registerWordEl(li, wi, el, isBg) {
   if (el) {
-    animator.registerWord(li, wi, el)
+    animator.registerWord(li, wi, el, isBg)
   } else {
-    animator.unregisterWord(li, wi)
+    animator.unregisterWord(li, wi, isBg)
   }
 }
 
@@ -144,6 +327,10 @@ function registerLineEl(li, el) {
   if (el) {
     animator.registerLine(li, el)
     lineElMap.set(li, el)
+    measuredHeights.set(li, el.offsetHeight)
+    if (li === activeLineIdx.value && !isScrubbing.value) {
+      updateScrollGoal(li)
+    }
   } else {
     animator.unregisterLine(li)
     lineElMap.delete(li)
@@ -156,12 +343,18 @@ function updateScrollGoal(lineIdx) {
   nextTick(() => {
     const containerH = scrollerEl.value?.clientHeight || 600
     const el = lineElMap.get(lineIdx)
-    if (!el) return
+    if (!el) {
+      let estimatedY = topPad.value
+      for (let i = 0; i < lineIdx; i++) {
+        estimatedY += measuredHeights.get(i) || estimatedLineHeight
+      }
+      animator.setScrollGoal(-(estimatedY - containerH * 0.4))
+      return
+    }
 
     const elTop = el.offsetTop
     const elH = el.offsetHeight
     const center = elTop + elH / 2
-    // Scroll goal: đặt active line ở 40% chiều cao (cao hơn trung điểm một chút, giống Apple Music)
     const goal = -(center - containerH * 0.4)
     animator.setScrollGoal(goal)
   })
@@ -176,6 +369,13 @@ function getLineClass(li) {
   return 'align-right'
 }
 
+function getAlignClass(li) {
+  const align = getLineClass(li)
+  if (align === 'align-left') return 'justify-start origin-left'
+  if (align === 'align-center') return 'justify-center origin-center'
+  return 'justify-end origin-right'
+}
+
 // ─── Background style ─────────────────────────────────────────────────────────
 const bgStyle = computed(() => ({
   backgroundImage: currentTrack.value?.cover
@@ -184,23 +384,31 @@ const bgStyle = computed(() => ({
 }))
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
+const isActive = computed(() => props.isOpen || props.inline)
+
 watch(
-  () => props.isOpen,
-  (open) => {
-    if (open) {
-      fetchLyrics()
+  isActive,
+  async (active) => {
+    if (active) {
+      // Always re-assign the correct audio deck element when panel opens
+      animator.audioElement = player.getAudio()
+      await fetchLyrics()
+      // Wait for Vue to render the lyric lines (v-for) before starting the loop
+      await nextTick()
       animator.start()
     } else {
       animator.stop()
     }
-  }
+  },
+  { immediate: true }
 )
 
 watch(
   () => currentTrack.value?.title,
   (newTitle) => {
+    animator.audioElement = player.getAudio()
     if (newTitle) prefetchLyrics()
-    if (props.isOpen) {
+    if (isActive.value) {
       parsedLyrics.value = []
       activeLineIdx.value = -1
       scrollY.value = 0
@@ -218,6 +426,29 @@ function close() {
   emit('close')
 }
 
+// ─── Touch gestures ───────────────────────────────────────────────────────────
+let touchStartX = 0
+let touchStartY = 0
+
+function onTouchStart(event) {
+  if (event.touches.length !== 1) return
+  touchStartX = event.touches[0].screenX
+  touchStartY = event.touches[0].screenY
+}
+
+function onTouchEnd(event) {
+  if (event.changedTouches.length !== 1) return
+  const touchEndX = event.changedTouches[0].screenX
+  const touchEndY = event.changedTouches[0].screenY
+
+  const diffX = Math.abs(touchEndX - touchStartX)
+  const diffY = touchEndY - touchStartY
+
+  if (diffY > 80 && diffY > diffX * 1.5) {
+    close()
+  }
+}
+
 // ─── Fetch ────────────────────────────────────────────────────────────────────
 async function prefetchLyrics() {
   if (!currentTrack.value) return
@@ -225,14 +456,19 @@ async function prefetchLyrics() {
   if (lyricsCache.has(key)) return
   try {
     await getLyrics(key)
-  } catch {
-    // keep prefetch silent
-  }
+  } catch {}
 }
+
+let _lastFetchId = null
 
 async function fetchLyrics() {
   if (!currentTrack.value) return
   const key = cacheKey()
+  updateFontForTrack(currentTrack.value)
+
+  const reqId = Symbol()
+  _lastFetchId = reqId
+
   if (lyricsCache.has(key)) {
     applyLyrics(lyricsCache.get(key))
     return
@@ -240,11 +476,13 @@ async function fetchLyrics() {
   loading.value = true
   error.value = ''
   try {
-    const lines = await getLyrics(key)
-    if (cacheKey() === key) applyLyrics(lines)
+    const ast = await getLyrics(key)
+    if (_lastFetchId !== reqId) return
+    applyLyrics(ast)
+    loading.value = false
   } catch (err) {
-    if (cacheKey() === key) {
-      error.value = err.message || 'Error loading lyrics'
+    if (_lastFetchId === reqId) {
+      error.value = err?.message || 'Error loading lyrics'
       loading.value = false
     }
   }
@@ -270,127 +508,108 @@ async function doFetch(key) {
   const t = currentTrack.value
   if (!t) throw new Error('No track selected')
 
-  // 1. Try local .lrc file first based on file path
-  if (t.file) {
-    try {
-      const lrcFile = t.file.replace(/\.[^.]+$/, '.lrc')
-      const encodedUrl = lrcFile.split('/').map(encodeURIComponent).join('/')
-      const localRes = await fetch(`/downloads/${encodedUrl}`)
-      if (localRes.ok) {
-        const text = await localRes.text()
-        if (text && text.trim().length > 0) {
-          const lines = parseLrc(text)
-          if (lines && lines.length > 0) {
-            lyricsCache.set(key, lines)
-            return lines
-          }
-        }
-      }
-    } catch (e) {
-      // Ignore local fetch error and fallback to lrclib API
-    }
-  }
-
-  // 2. Fallback to API if local file doesn't exist or is empty
-  const params = new URLSearchParams()
-  if (t.title) params.append('track_name', t.title)
-  if (t.artist) params.append('artist_name', t.artist)
-
-  const res = await fetch(`https://lrclib.net/api/get?${params}`)
-  if (!res.ok)
-    throw new Error(
-      res.status === 404 ? 'Lyrics not found' : 'Failed to fetch lyrics'
+  try {
+    let ast
+    ast = await api.searchTrackLyrics(
+      t.title || '',
+      t.artist || '',
+      t.album || '',
+      t.duration_ms || 0,
+      t.file || '',
+      t.id || ''
     )
 
-  const data = await res.json()
-  let lines = []
-
-  if (data.syncedLyrics) {
-    lines = parseLrc(data.syncedLyrics)
-  } else if (data.plainLyrics) {
-    // plain: treat each line as a single word block
-    lines = data.plainLyrics
-      .split('\n')
-      .filter(Boolean)
-      .map((text, i) => ({
-        time: i * 3,
-        duration: 3,
-        text,
-        hasWordTiming: false,
-        words: text
-          .split(/\s+/)
-          .filter(Boolean)
-          .map((w, wi, arr) => ({
-            text: w,
-            delay: (wi / arr.length) * 3,
-            duration: 3 / arr.length,
-          })),
-      }))
-  } else {
-    throw new Error('No lyrics available')
+    if (!ast || !ast.lines) {
+      throw new Error('No lyrics available')
+    }
+    lyricsCache.set(key, ast)
+    return ast
+  } catch (err) {
+    if (err.response && err.response.status === 404) {
+      throw new Error('Lyrics not found')
+    }
+    throw new Error('Failed to fetch lyrics')
   }
-
-  lyricsCache.set(key, lines)
-  return lines
 }
 
-function applyLyrics(lines) {
-  parsedLyrics.value = lines
+function applyLyrics(ast) {
   loading.value = false
-  error.value = ''
-  animator.setLines(lines)
 
-  // Jump scroll to active line on open
+  if (!ast) {
+    error.value = 'No synced lyrics available.'
+    return
+  }
+
+  const lines = ast.lines || ast
+  if (!Array.isArray(lines) || lines.length === 0) {
+    error.value = 'No synced lyrics available.'
+    return
+  }
+  syncType.value = ast.sync_type || ast.syncType || ast.granularity || 'word'
+
+  // Use TtmlParser
+  const parsed = parseTtml(lines)
+  const mappedLines = parsed.lines
+  syncType.value = parsed.isWordSync ? 'word' : 'line'
+
+  parsedLyrics.value = mappedLines
+  error.value = ''
+  animator.setLines(mappedLines)
+
   nextTick(() => {
     const now = player.currentTime.value
     let startIdx = 0
-    for (let i = lines.length - 1; i >= 0; i--) {
-      if (now >= lines[i].time - 0.25) {
+    for (let i = mappedLines.length - 1; i >= 0; i--) {
+      if (now >= mappedLines[i].startTime - 0.25) {
         startIdx = i
         break
       }
     }
-    // snap scroll spring to position
     const containerH = scrollerEl.value?.clientHeight || 600
-    const el = lineElMap.get(startIdx)
-    if (el) {
-      const center = el.offsetTop + el.offsetHeight / 2
-      const snap = -(center - containerH * 0.4)
-      animator._scrollSpring.snapTo(snap)
-      scrollY.value = snap
-    }
+    let snap = -(
+      topPad.value +
+      startIdx * estimatedLineHeight -
+      containerH * 0.4
+    )
+    animator._scrollSpring.snapTo(snap)
+    scrollY.value = snap
     activeLineIdx.value = startIdx
   })
 }
 </script>
 
 <style scoped>
-/* ─── Root ───────────────────────────────────────────────────────────────────── */
 .lyrics-root {
   color: white;
   font-family: 'Tahoma', 'Geneva', sans-serif;
+  overscroll-behavior: contain;
 }
 
-/* ─── Background ─────────────────────────────────────────────────────────────── */
-.lyrics-bg {
-  position: absolute;
-  inset: -10%;
-  z-index: 0;
-  background-size: cover;
-  background-position: center;
-  filter: blur(70px) saturate(180%) brightness(0.6);
-  transform: scale(1.15);
-  transition: background-image 1.2s ease;
-}
-.lyrics-bg-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: rgba(0, 0, 0, 0.62);
-  backdrop-filter: blur(4px);
+.lyrics-inline-mode {
+  container-type: inline-size;
 }
 
-/* ─── Nav ────────────────────────────────────────────────────────────────────── */
+.lyrics-inline-mode .lyric-word,
+.lyrics-inline-mode .lead-line-text {
+  font-size: clamp(1.5rem, 10cqi, 2.25rem) !important;
+}
+
+.lyrics-inline-mode .lyric-instrument {
+  font-size: clamp(2rem, 12cqi, 2.5rem) !important;
+}
+
+.lyrics-inline-mode .lyric-line.unplayed {
+  opacity: 0.5 !important;
+}
+
+.lyrics-inline-mode .lyric-line.played {
+  opacity: 0.35 !important;
+}
+
+.lyrics-inline-mode .lyric-line {
+  margin-bottom: 1.5rem !important;
+}
+
 .lyrics-nav {
   position: relative;
   z-index: 10;
@@ -409,13 +628,11 @@ function applyLyrics(lines) {
   opacity: 0.45;
 }
 
-/* ─── Content area ───────────────────────────────────────────────────────────── */
 .lyrics-content {
   position: relative;
   z-index: 10;
   flex: 1;
   overflow: hidden;
-  /* Vertical mask: fade top & bottom 15% */
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
@@ -432,7 +649,6 @@ function applyLyrics(lines) {
   );
 }
 
-/* ─── Lyrics list ────────────────────────────────────────────────────────────── */
 .lyrics-list {
   position: absolute;
   top: 0;
@@ -440,37 +656,78 @@ function applyLyrics(lines) {
   right: 0;
   will-change: transform;
   padding: 0 clamp(1.25rem, 5vw, 4rem);
-  /* Prevent text selection while animating */
   user-select: none;
 }
 
-/* ─── Line ───────────────────────────────────────────────────────────────────── */
 .lyric-line {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
   width: 100%;
-  padding: 0.4rem 0;
   margin-bottom: 2.5rem;
-  line-height: 1.1;
   cursor: pointer;
-  /* GPU hint for blur and scale animations */
   will-change: filter, transform;
-  transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  line-height: 1.55; /* Mở trần cho dấu Tiếng Việt thở */
+  padding: 0.75rem 0;
+  overflow: visible !important;
+  transform-origin: left center;
+  transition:
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.45s ease,
+    filter 0.45s ease;
+}
+
+/* HỆ THỐNG PHÂN CẤP DÒNG CHUẨN SPICY LYRICS */
+.lyric-line.future {
+  opacity: 0.35;
+  transform: scale(1);
+}
+
+.lyric-line.active {
+  opacity: 1;
+  transform: scale(
+    1.04
+  ); /* Dòng đang hát phóng to nhẹ mang lại cảm giác sống động */
+}
+
+.lyric-line.passed {
+  opacity: 0.22; /* Dòng đã hát chìm sâu xuống đáy */
+  transform: scale(0.98);
+  filter: blur(0.7px); /* Đặc sản "nhòe dĩ vãng" của SpicyLyrics */
+}
+
+.scrubbing-active {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+.scrubbing-dimmed {
+  opacity: 0.15 !important;
+}
+
+.scrub-indicator {
+  position: absolute;
+  left: -2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  opacity: 0.5;
+  width: 100vw;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+  z-index: -1;
 }
 
 .align-left {
-  justify-content: flex-start;
+  align-items: flex-start;
   transform-origin: left center;
 }
 
 .align-center {
-  justify-content: center;
+  align-items: center;
   transform-origin: center center;
 }
 
 .align-right {
-  justify-content: flex-end;
+  align-items: flex-end;
   transform-origin: right center;
 }
 
@@ -478,81 +735,126 @@ function applyLyrics(lines) {
   font-size: clamp(1.8rem, 4vw, 3rem);
   opacity: 0.3;
   padding: 0.3rem 0;
+  align-self: center;
 }
 
-/* ─── Word ───────────────────────────────────────────────────────────────────── */
+.lead-words,
+.bg-words {
+  width: 100%;
+}
+
+.lead-line-text {
+  font-size: clamp(1.6rem, 4.5vw, 3.75rem);
+  font-weight: 900;
+  letter-spacing: 0.05rem;
+  color: white;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+  width: 100%;
+}
+
+.lead-line-text.is-active {
+  opacity: 1;
+}
+
+.lead-line-text.is-past {
+  opacity: 0.7;
+}
+
 .lyric-word {
-  /* Inline-grid: base and hl layers stacked exactly */
-  display: inline-grid;
-  margin-right: 0.3em;
-  margin-bottom: 0.25em;
-  transform-origin: bottom center;
-  cursor: pointer;
-  /* Spring will write transform — GPU composited */
+  display: inline-block;
+  position: relative;
+  white-space: pre;
+  margin-right: 0.12em;
+  color: rgba(255, 255, 255, 0.22); /* Chữ xám nền lúc chưa hát tới */
+  font-weight: 800;
+  letter-spacing: -0.015em;
   will-change: transform;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); /* Nhịp nảy lò xo micro-bounce */
+
+  /* Preserve necessary structural properties */
+  margin-bottom: 0.25em;
+  cursor: pointer;
   backface-visibility: hidden;
-}
-
-/* Base (faded) layer */
-.word-base {
-  grid-column: 1;
-  grid-row: 1;
-  color: white;
   font-size: clamp(1.6rem, 4.5vw, 3.75rem);
-  font-weight: 900;
-  letter-spacing: 0.2rem;
-  white-space: nowrap;
-  /* opacity set by spring via AnimatorStore */
-  opacity: 0.28;
 }
 
-/* Wrapper for highlight layer to apply drop-shadow without clipping */
-.word-hl-wrapper {
-  grid-column: 1;
-  grid-row: 1;
-  display: inline-grid;
-  will-change: filter;
-  filter: drop-shadow(
-      0 0 var(--glow-blur, 0px) rgba(255, 255, 255, var(--glow-opacity, 0))
-    )
-    drop-shadow(
-      0 0 calc(var(--glow-blur, 0px) * 2.5)
-        rgba(255, 255, 255, calc(var(--glow-opacity, 0) * 0.5))
+.lyric-word[data-has-space='true'] {
+  margin-right: 0.35em;
+}
+
+/* 3. THẦN CHÚ KHẮC PHỤC GLOW HÌNH CHỮ NHẬT VÀ THÊM PARTICLES (RELATIVE `em` SCALE) */
+.lyric-word::before {
+  content: '';
+  position: absolute;
+  inset: -1.2em -0.6em; /* Phủ rộng hơn chữ theo tỷ lệ font-size */
+  pointer-events: none;
+  z-index: 10;
+
+  /* Tạo ra các đốm sáng (particles) kích thước tính theo em để scale chuẩn trên màn High-DPI/Retina */
+  background:
+    radial-gradient(
+      circle at calc(var(--fill-pct, 0%) * 1.2) 20%,
+      rgba(255, 255, 255, 1) 0%,
+      transparent 0.15em
+    ),
+    radial-gradient(
+      circle at calc(var(--fill-pct, 0%) * 1.2 - 5%) 85%,
+      rgba(255, 255, 255, 0.9) 0%,
+      transparent 0.25em
+    ),
+    radial-gradient(
+      circle at calc(var(--fill-pct, 0%) * 1.2 - 10%) 50%,
+      var(--dynamic-primary, rgba(255, 255, 255, 0.8)) 0%,
+      transparent 0.7em
+    ),
+    radial-gradient(
+      circle at calc(var(--fill-pct, 0%) * 1.2 + 5%) 60%,
+      rgba(255, 255, 255, 1) 0%,
+      transparent 0.1em
     );
+
+  filter: blur(0.02em) drop-shadow(0 0 0.3em rgba(255, 255, 255, 1));
+  mix-blend-mode: color-dodge;
+
+  opacity: var(--glow-opacity, 0);
+  will-change: opacity;
 }
 
-/* Highlight (filled) layer */
-.word-hl {
-  grid-column: 1;
-  grid-row: 1;
-  font-size: clamp(1.6rem, 4.5vw, 3.75rem);
-  font-weight: 900;
-  letter-spacing: 0.2rem;
-  white-space: nowrap;
-  color: white;
-  /* Gradient fill: --fill-pct is written by spring each frame */
-  /* Feather region is BEHIND the fill point to avoid white leading-edge artifact */
+.lyric-word::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--dynamic-highlight, #ffffff);
+
+  /* Đổ bóng rực rỡ 3 lớp theo tỷ lệ tương đối với chữ (Responsive Glow) */
+  text-shadow:
+    0 0 calc(var(--glow-scale, 0) * 0.4em)
+      var(--dynamic-primary, rgba(255, 255, 255, 1)),
+    0 0 calc(var(--glow-scale, 0) * 0.9em)
+      var(--dynamic-primary, rgba(255, 255, 255, 0.85)),
+    0 0 calc(var(--glow-scale, 0) * 1.8em)
+      var(--dynamic-primary, rgba(255, 255, 255, 0.5));
+
+  /* Quét Karaoke mượt, đảm bảo đen 100% khi fill=120% */
   -webkit-mask-image: linear-gradient(
     90deg,
-    black calc(var(--fill-pct, 0%) - 18%),
-    transparent var(--fill-pct, 0%),
-    transparent 100%
+    #000 calc(var(--fill-pct, 0%) * 1.2 - 20%),
+    transparent calc(var(--fill-pct, 0%) * 1.2)
   );
   mask-image: linear-gradient(
     90deg,
-    black calc(var(--fill-pct, 0%) - 18%),
-    transparent var(--fill-pct, 0%),
-    transparent 100%
+    #000 calc(var(--fill-pct, 0%) * 1.2 - 20%),
+    transparent calc(var(--fill-pct, 0%) * 1.2)
   );
-  /* opacity set by spring */
-  opacity: 0.01;
+
+  opacity: var(--hl-opacity, 0);
   will-change:
     opacity,
-    mask-image,
     -webkit-mask-image;
 }
 
-/* ─── State screens ──────────────────────────────────────────────────────────── */
 .lyrics-state {
   display: flex;
   flex-direction: column;
@@ -566,7 +868,6 @@ function applyLyrics(lines) {
   opacity: 0.5;
 }
 
-/* Loading dots animation */
 .lyrics-state-dots {
   display: flex;
   gap: 0.5rem;
@@ -602,7 +903,6 @@ function applyLyrics(lines) {
   }
 }
 
-/* ─── Modal transition ───────────────────────────────────────────────────────── */
 .lyrics-modal-enter-active,
 .lyrics-modal-leave-active {
   transition:
@@ -615,7 +915,6 @@ function applyLyrics(lines) {
   transform: translateY(24px);
 }
 
-/* ─── Icon button ────────────────────────────────────────────────────────────── */
 .icon-btn {
   display: flex;
   align-items: center;

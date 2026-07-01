@@ -33,6 +33,7 @@ export default {
     playlists: 'Playlists',
   },
   search: {
+    submit: 'Buscar',
     placeholder:
       'Busque uma música ou cole um link do Spotify ou YouTube Music…',
     title: 'Resultados da busca',
@@ -102,7 +103,7 @@ export default {
     checkNow: 'Verificar agora',
     stop: 'Parar de monitorar',
     deletePrompt: 'Parar de monitorar "{name}"?',
-    info: 'Quando você adiciona uma playlist, o Downtify baixa todas as faixas atuais dela e segue monitorando. Qualquer música adicionada depois no Spotify é detectada e baixada automaticamente na próxima verificação.',
+    info: 'Quando você adiciona uma playlist, o Hify baixa todas as faixas atuais dela e segue monitorando. Qualquer música adicionada depois no Spotify é detectada e baixada automaticamente na próxima verificação.',
     every15: 'A cada 15 min',
     every30: 'A cada 30 min',
     every1h: 'A cada hora',
@@ -138,7 +139,7 @@ export default {
   },
   settings: {
     title: 'Configurações',
-    subtitle: 'Ajuste como o Downtify baixa e marca suas músicas.',
+    subtitle: 'Ajuste como o Hify baixa e marca suas músicas.',
     audioSource: 'Fonte de áudio',
     lyricsSource: 'Fonte de letras',
     lyricsHint: 'apenas o lrclib está ativo',

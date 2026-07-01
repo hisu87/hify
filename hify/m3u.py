@@ -47,7 +47,7 @@ def build_m3u_content(
     exist on disk are skipped (and logged).
 
     Track paths are written **relative to the M3U file's directory** so
-    the same file works whether it's read from inside the Downtify
+    the same file works whether it's read from inside the Hify
     container (``/downloads/...``) or from another consumer that mounts
     the same library at a different root (Jellyfin under
     ``/nas/music/...``, etc). ``m3u_dir`` defaults to
@@ -79,7 +79,8 @@ def build_m3u_content(
         if title or artist:
             label = ' - '.join(p for p in (artist, title) if p)
             lines.append(f'#EXTINF:{duration_int},{label}')
-        lines.append(os.path.relpath(path, start=m3u_dir))
+        rel_path = os.path.relpath(path, start=m3u_dir)
+        lines.append(rel_path.replace('\\', '/'))
         kept += 1
     # Standard M3U uses LF line endings.
     return '\n'.join(lines) + '\n', kept

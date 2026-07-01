@@ -7,6 +7,9 @@ authentication and no premium account are required.
 
 from __future__ import annotations
 
+import concurrent.futures
+import copy
+import functools
 import json
 import re
 from typing import Any, Optional
@@ -337,6 +340,7 @@ def _release_date_raw_from_field(release: Any, *, _depth: int = 0) -> str:
     return ''
 
 
+@functools.lru_cache(maxsize=1024)
 def _album_release_date_from_open_page(album_id: str) -> str:
     """Parse release date from the public album HTML when embed omits it."""
 
@@ -440,13 +444,19 @@ def _track_dict(
     }
 
 
-def track_from_id(track_id: str) -> dict[str, Any]:
+@functools.lru_cache(maxsize=512)
+def _cached_track_from_id(track_id: str) -> dict[str, Any]:
     payload = _fetch_embed_json('track', track_id)
     entity = _entity_from(payload)
     return _track_dict(entity, track_id=track_id)
 
 
-def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
+def track_from_id(track_id: str) -> dict[str, Any]:
+    return copy.deepcopy(_cached_track_from_id(track_id))
+
+
+@functools.lru_cache(maxsize=128)
+def _cached_album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
     payload = _fetch_embed_json('album', album_id)
     entity = _entity_from(payload)
     album_name = entity.get('name') or ''
@@ -488,6 +498,10 @@ def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
         row['album_track_total'] = album_track_total
         songs.append(row)
     return songs
+
+
+def album_tracks_from_id(album_id: str) -> list[dict[str, Any]]:
+    return copy.deepcopy(_cached_album_tracks_from_id(album_id))
 
 
 def _parse_playlist_tracks(entity: dict[str, Any]) -> list[dict[str, Any]]:
@@ -643,28 +657,58 @@ def _graphql_fetch_page(
     return data['data']['playlistV2']
 
 
+def _parse_page_items(
+    page_content: dict[str, Any], songs: list[dict[str, Any]]
+) -> None:
+    for item in page_content.get('items') or []:
+        td = _track_dict_from_graphql_item(item)
+        if td:
+            songs.append(td)
+
+
 def _graphql_all_tracks(
     playlist_id: str, token: str
 ) -> tuple[Optional[str], list[dict[str, Any]]]:
     """Return ``(playlist_name_or_None, all_tracks)`` via partner GraphQL."""
     songs: list[dict[str, Any]] = []
-    playlist_name: Optional[str] = None
-    offset = 0
     limit = 100
-    while True:
-        pv2 = _graphql_fetch_page(playlist_id, token, offset, limit)
-        if playlist_name is None:
-            playlist_name = pv2.get('name') or None
-        content = pv2.get('content') or {}
-        items = content.get('items') or []
-        for item in items:
-            td = _track_dict_from_graphql_item(item)
-            if td:
-                songs.append(td)
-        total = content.get('totalCount') or 0
-        offset += len(items)
-        if not items or offset >= total:
-            break
+
+    # Fetch the first page synchronously to get the totalCount and playlist name
+    pv2 = _graphql_fetch_page(playlist_id, token, 0, limit)
+    playlist_name = pv2.get('name') or None
+    _parse_page_items(pv2.get('content') or {}, songs)
+
+    total = (pv2.get('content') or {}).get('totalCount') or 0
+    if total <= limit:
+        return playlist_name, songs
+
+    # If there are more pages, fetch them concurrently
+    offsets = list(range(limit, total, limit))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_offset = {
+            executor.submit(
+                _graphql_fetch_page, playlist_id, token, off, limit
+            ): off
+            for off in offsets
+        }
+
+        page_results = {}
+        for future in concurrent.futures.as_completed(future_to_offset):
+            off = future_to_offset[future]
+            try:
+                page_results[off] = future.result()
+            except Exception as exc:
+                logger.error(
+                    'GraphQL page fetch failed for offset {}: {}', off, exc
+                )
+
+        # Process in correct order
+        for off in offsets:
+            if off in page_results:
+                _parse_page_items(
+                    page_results[off].get('content') or {}, songs
+                )
+
     return playlist_name, songs
 
 

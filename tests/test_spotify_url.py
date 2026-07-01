@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from downtify.spotify import parse_spotify_url
+from hify.spotify import parse_spotify_url
 
 # ── valid URLs ────────────────────────────────────────────────────────────────
 

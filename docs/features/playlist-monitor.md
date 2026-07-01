@@ -8,7 +8,7 @@ The Playlist Monitor watches your favourite Spotify playlists and automatically 
 
 ## How it works
 
-Downtify keeps a background task running every 60 seconds. On each sweep it checks every enabled monitored playlist to see if it is due for inspection (based on its configured interval). When a playlist is due, Downtify:
+Hify keeps a background task running every 60 seconds. On each sweep it checks every enabled monitored playlist to see if it is due for inspection (based on its configured interval). When a playlist is due, Hify:
 
 1. Fetches the full track list from Spotify
 2. Compares it against the set of tracks already downloaded
@@ -51,15 +51,15 @@ From the Monitor page you can:
 
 ## Per-track metadata enrichment
 
-Playlist embed entries are missing the release year and use the playlist cover art instead of the per-track album cover. Downtify re-fetches each new track individually to get the correct cover and year before downloading — falling back to the playlist-level data if the per-track fetch fails.
+Playlist embed entries are missing the release year and use the playlist cover art instead of the per-track album cover. Hify re-fetches each new track individually to get the correct cover and year before downloading — falling back to the playlist-level data if the per-track fetch fails.
 
 ## M3U integration
 
-After each sweep that downloads at least one new track, Downtify regenerates the playlist's M3U file to reflect the current on-disk state. See [M3U Export](m3u-export.md) for details.
+After each sweep that downloads at least one new track, Hify regenerates the playlist's M3U file to reflect the current on-disk state. See [M3U Export](m3u-export.md) for details.
 
 ## Storage
 
-Monitor state is stored in a SQLite database at `/data/downtify_monitor.db`. The database records:
+Monitor state is stored in a SQLite database at `/data/hify_monitor.db`. The database records:
 
 - Each monitored playlist (Spotify ID, name, URL, interval, enabled state, last check time)
 - Every track successfully downloaded per playlist, including the filename on disk

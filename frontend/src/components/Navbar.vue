@@ -9,11 +9,11 @@
         :title="t('nav.home')"
       >
         <img
-          src="../assets/downtify.svg"
+          src="../assets/hify.svg"
           class="h-8 w-8 drop-shadow-[0_0_8px_rgba(26,208,92,0.55)]"
         />
         <span class="hidden sm:inline text-lg font-bold tracking-tight">
-          Downtify
+          Hify
         </span>
       </button>
 
@@ -122,8 +122,8 @@ import SearchInput from './SearchInput.vue'
 
 const route = useRoute()
 const themeMgr = useBinaryThemeManager({
-  newLightAlias: 'downtify-light',
-  newDarkAlias: 'downtify-dark',
+  newLightAlias: 'hify-light',
+  newDarkAlias: 'hify-dark',
 })
 const pt = useProgressTracker()
 const sm = useSearchManager()

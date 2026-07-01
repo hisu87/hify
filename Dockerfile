@@ -1,3 +1,12 @@
+# Stage 1: build frontend
+FROM --platform=$BUILDPLATFORM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: build backend dependencies
 FROM python:3.13-alpine AS builder
 
 WORKDIR /build
@@ -9,31 +18,31 @@ RUN pip install --upgrade pip && \
 
 FROM python:3.13-alpine
 
-LABEL maintainer="Henrique Sebastião <contato@henriquesebastiao.com>"
-LABEL version="2.8.0"
+LABEL maintainer="hisu87"
+LABEL version="3.3.0-stable"
 LABEL description="Self-hosted Spotify downloader"
 
-LABEL org.opencontainers.image.title="Downtify" \
-      org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker." \
-      org.opencontainers.image.version="2.8.0" \
+LABEL org.opencontainers.image.title="Hify" \
+      org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker" \
+      org.opencontainers.image.version="3.3.0-stable" \
       org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
-      org.opencontainers.image.url="https://github.com/henriquesebastiao/downtify" \
-      org.opencontainers.image.source="https://github.com/henriquesebastiao/downtify" \
-      org.opencontainers.image.licenses="GPL-3.0" \
-      org.opencontainers.image.documentation="https://github.com/henriquesebastiao/downtify#readme" \
+      org.opencontainers.image.url="https://github.com/hisu87/hify" \
+      org.opencontainers.image.source="https://github.com/hisu87/hify" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.documentation="https://github.com/hisu87/hify#readme" \
       org.opencontainers.image.vendor="Henrique Sebastião" \
       org.opencontainers.image.base.name="python:3.13-alpine"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHON_COLORS=0 \
-    DOWNTIFY_LOG_LEVEL=info \
-    DOWNTIFY_PORT=8000 \
+    HIFY_LOG_LEVEL=info \
+    HIFY_PORT=8000 \
     UID=1000 \
     GID=1000 \
     UMASK=022
 
-WORKDIR /downtify
+WORKDIR /hify
 
 RUN apk add --no-cache \
     ffmpeg \
@@ -45,17 +54,20 @@ COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY main.py entrypoint.sh ./
-COPY downtify ./downtify
-COPY frontend/dist ./frontend/dist
+COPY hify ./hify
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 RUN sed -i 's/\r$//g' entrypoint.sh && \
     chmod +x entrypoint.sh
 
-ENV PATH="/home/downtify/.local/bin:${PATH}"
+ENV PATH="/home/hify/.local/bin:${PATH}"
 
 VOLUME /downloads
 VOLUME /data
 
-EXPOSE ${DOWNTIFY_PORT}
+EXPOSE ${HIFY_PORT}
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:${HIFY_PORT:-8000}/api/health || exit 1
 
 ENTRYPOINT ["/sbin/tini", "-g", "--", "./entrypoint.sh"]

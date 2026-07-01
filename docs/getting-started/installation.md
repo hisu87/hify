@@ -4,7 +4,7 @@ icon: lucide/download
 
 # Installation
 
-The quickest way to run Downtify is with a single `docker run` command. No Python, Node.js or other system dependencies needed on the host — everything is bundled inside the image.
+The quickest way to run Hify is with a single `docker run` command. No Python, Node.js or other system dependencies needed on the host — everything is bundled inside the image.
 
 ## Prerequisites
 
@@ -14,12 +14,12 @@ The quickest way to run Downtify is with a single `docker run` command. No Pytho
 
 ```bash
 docker run -d \
-  --name downtify \
+  --name hify \
   -p 8000:8000 \
   -v /path/to/music:/downloads \
-  -v downtify_data:/data \
+  -v hify_data:/data \
   --restart unless-stopped \
-  ghcr.io/henriquesebastiao/downtify
+  ghcr.io/hisu87/hify
 ```
 
 Replace `/path/to/music` with the directory where you want your music saved.
@@ -37,15 +37,15 @@ Both volumes persist across container restarts and upgrades. The `/downloads` vo
 
 ## Custom port
 
-To expose Downtify on a different host port, change the left side of `-p`:
+To expose Hify on a different host port, change the left side of `-p`:
 
 ```bash
 docker run -d \
-  --name downtify \
+  --name hify \
   -p 9090:8000 \           # host:container
   -v /path/to/music:/downloads \
-  -v downtify_data:/data \
-  ghcr.io/henriquesebastiao/downtify
+  -v hify_data:/data \
+  ghcr.io/hisu87/hify
 ```
 
 Then open **[http://localhost:9090](http://localhost:9090)**.
@@ -55,13 +55,13 @@ Then open **[http://localhost:9090](http://localhost:9090)**.
 Pull the latest image and recreate the container:
 
 ```bash
-docker pull ghcr.io/henriquesebastiao/downtify
-docker stop downtify && docker rm downtify
-docker run -d --name downtify -p 8000:8000 \
+docker pull ghcr.io/hisu87/hify
+docker stop hify && docker rm hify
+docker run -d --name hify -p 8000:8000 \
   -v /path/to/music:/downloads \
-  -v downtify_data:/data \
+  -v hify_data:/data \
   --restart unless-stopped \
-  ghcr.io/henriquesebastiao/downtify
+  ghcr.io/hisu87/hify
 ```
 
 Your music and settings are preserved in the volumes.

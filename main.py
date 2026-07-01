@@ -1,4 +1,4 @@
-"""Downtify entry point.
+"""Hify entry point.
 
 Boots the FastAPI app that powers the web UI. The previous incarnation
 relied on the Spotify Web API (via ``spotdl`` + ``spotipy``); since that
@@ -18,9 +18,9 @@ import os
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from load_dotenv import load_dotenv
 from loguru import logger
@@ -32,9 +32,10 @@ from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
 from uvicorn import Config, Server
 
-from downtify import __version__, api
-from downtify.downloader import Downloader
-from downtify.monitor import PlaylistMonitorDB, monitor_loop
+from hify import __version__, api
+from hify.database import DatabaseManager
+from hify.downloader import Downloader
+from hify.monitor import PlaylistMonitorDB, monitor_loop, sync_filesystem_to_db
 
 load_dotenv()
 
@@ -82,9 +83,9 @@ def _setup_logging(level: str) -> None:
 
 DOWNLOAD_DIR = Path(os.getenv('DOWNLOAD_DIR', '/downloads'))
 DATABASE_DIR = Path(os.getenv('DATABASE_DIR', '/data'))
-WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/downtify/frontend/dist')
+WEB_GUI_LOCATION = os.getenv('WEB_GUI_LOCATION', '/hify/frontend/dist')
 DEFAULT_HOST = os.getenv('HOST', '0.0.0.0')
-DEFAULT_PORT = int(os.getenv('DOWNTIFY_PORT', os.getenv('PORT', '8000')))
+DEFAULT_PORT = int(os.getenv('HIFY_PORT', os.getenv('PORT', '8000')))
 
 
 class SPAStaticFiles(StaticFiles):
@@ -101,6 +102,12 @@ def _fix_mime_types() -> None:
     mimetypes.add_type('application/javascript', '.js')
     mimetypes.add_type('application/javascript', '.mjs')
     mimetypes.add_type('text/css', '.css')
+
+
+def _is_safe_path(path_str: str) -> bool:
+    """Ensure the path is strictly relative and does not attempt directory traversal."""
+    p = Path(path_str)
+    return not p.is_absolute() and '..' not in p.parts
 
 
 def _extract_cover(path: Path) -> tuple[bytes | None, str | None]:
@@ -179,12 +186,29 @@ def _extract_cover(path: Path) -> tuple[bytes | None, str | None]:
     return None, None
 
 
+def _is_safe_path(path_str: str) -> bool:
+    """Ensure path is relative, free of null bytes, and contains no traversal segments."""
+    if '\x00' in path_str:
+        return False
+
+    # Convert Windows style slashes to forward slashes to ensure consistent checking on non-Windows systems
+    path_str = path_str.replace('\\', '/')
+
+    p = Path(path_str)
+    return (
+        not p.is_absolute()
+        and '..' not in p.parts
+        and not path_str.startswith('/')
+        and not path_str[1:3] == ':/'
+    )
+
+
 def build_app() -> FastAPI:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 
     app = FastAPI(
-        title='Downtify',
+        title='Hify',
         description=(
             'Download your Spotify playlists and songs along with album '
             'art and metadata in a self-hosted way via Docker.'
@@ -204,6 +228,11 @@ def build_app() -> FastAPI:
     api.state.settings = api._load_settings(settings_path)
 
     api.state.version = __version__
+
+    # Ensure covers directory exists and mount it
+    covers_dir = Path("data/covers")
+    covers_dir.mkdir(parents=True, exist_ok=True)
+    app.mount('/covers', StaticFiles(directory=str(covers_dir)), name='covers')
     api.state.downloader = Downloader(
         DOWNLOAD_DIR,
         audio_format=api.state.settings['format'],
@@ -216,6 +245,24 @@ def build_app() -> FastAPI:
             api.state.settings.get('organize_by_artist', False)
         ),
     )
+
+    @app.exception_handler(Exception)
+    async def global_shield_exception_handler(
+        request: Request, exc: Exception
+    ):
+        """
+        Lớp khiên tối thượng: Bất cứ lỗi 500 nào không được catch tường minh
+        sẽ bị màng lọc này chặn lại, cấm tuyệt đối việc rò rỉ Stack Trace.
+        """
+        logger.error(
+            f'🚨 Unhandled Exception at {request.method} {request.url.path}',
+            exc_info=exc,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={'detail': 'An internal server error occurred.'},
+        )
+
     app.include_router(api.router)
 
     @app.on_event('startup')
@@ -225,8 +272,16 @@ def build_app() -> FastAPI:
         api.state.download_semaphore = asyncio.Semaphore(
             max(1, int(api.state.settings.get('max_parallel_downloads', 3)))
         )
-        db_path = DATABASE_DIR / 'downtify_monitor.db'
+        # Unify both monitor and core tracking into hify.db
+        db_path = DATABASE_DIR / 'hify.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
+
+        main_db_path = DATABASE_DIR / 'hify.db'
+        api.state.db = DatabaseManager(main_db_path)
+
+        # Run synchronous filesystem scanning in a thread
+        await asyncio.to_thread(sync_filesystem_to_db, DOWNLOAD_DIR, api.state.db)
+
         asyncio.create_task(
             monitor_loop(
                 db=api.state.monitor_db,
@@ -237,26 +292,24 @@ def build_app() -> FastAPI:
             )
         )
 
+    _list_cache = None
+    _list_cache_time = 0
+
     @app.get('/list')
-    def list_downloads() -> list[str]:
-        audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
-        base = DOWNLOAD_DIR.resolve()
-        if not base.exists():
-            return []
-        files: list[str] = []
-        # Walk recursively so per-playlist sub-folders show up alongside
-        # loose downloads in the library view.
-        for path in base.rglob('*'):
-            if not path.is_file():
-                continue
-            if path.suffix.lower() not in audio_exts:
-                continue
-            files.append(path.relative_to(base).as_posix())
-        files.sort()
-        return files
+    def list_downloads() -> list[dict]:
+        # Pure DB query, no FS fallback
+        if hasattr(api.state, 'db') and api.state.db:
+            return api.state.db.list_all_tracks()
+        return []
 
     @app.delete('/delete')
     def delete_download(file: str) -> dict:
+        if not _is_safe_path(file):
+            return {
+                'deleted': False,
+                'error': 'Invalid path: traversal components not allowed',
+            }
+
         # Resolve and confine to DOWNLOAD_DIR to prevent path traversal.
         base = DOWNLOAD_DIR.resolve()
         try:
@@ -274,6 +327,12 @@ def build_app() -> FastAPI:
 
     @app.get('/cover')
     def get_cover(file: str):
+        if not _is_safe_path(file):
+            raise HTTPException(
+                status_code=400,
+                detail='Invalid path: traversal components not allowed',
+            )
+
         # Resolve and confine to DOWNLOAD_DIR to prevent path traversal.
         base = DOWNLOAD_DIR.resolve()
         try:
@@ -297,11 +356,80 @@ def build_app() -> FastAPI:
             },
         )
 
-    app.mount(
-        '/downloads',
-        StaticFiles(directory=str(DOWNLOAD_DIR)),
-        name='downloads',
-    )
+    import mimetypes
+
+    from fastapi.responses import StreamingResponse
+
+    @app.get('/downloads/{file_path:path}')
+    async def download_file(file_path: str, request: Request):
+        if not _is_safe_path(file_path):
+            return JSONResponse(status_code=400, content={'error': 'Invalid path'})
+
+        base = DOWNLOAD_DIR.resolve()
+        try:
+            full = (base / file_path).resolve()
+            full.relative_to(base)
+        except (ValueError, RuntimeError):
+            return JSONResponse(status_code=400, content={'error': 'Invalid path'})
+
+        if not full.is_file():
+            return JSONResponse(status_code=404, content={'error': 'File not found'})
+
+        file_size = full.stat().st_size
+        range_header = request.headers.get('Range')
+
+        if not range_header:
+            # Chunk size 1MB (1024 * 1024)
+            def file_iterator():
+                with open(full, 'rb') as f:
+                    while chunk := f.read(1024 * 1024):
+                        yield chunk
+            media_type, _ = mimetypes.guess_type(str(full))
+            return StreamingResponse(
+                file_iterator(),
+                media_type=media_type or 'application/octet-stream',
+                headers={'Accept-Ranges': 'bytes', 'Content-Length': str(file_size)}
+            )
+
+        try:
+            byte_range = range_header.replace('bytes=', '').split('-')
+            start = int(byte_range[0])
+            end = int(byte_range[1]) if byte_range[1] else file_size - 1
+        except ValueError:
+            return JSONResponse(status_code=416, content={'error': 'Invalid Range'})
+
+        if start >= file_size or end >= file_size or start > end:
+            return JSONResponse(
+                status_code=416,
+                headers={'Content-Range': f'bytes */{file_size}'}
+            )
+
+        chunk_size = end - start + 1
+
+        def ranged_file_iterator(start, chunk_size):
+            with open(full, 'rb') as f:
+                f.seek(start)
+                remaining = chunk_size
+                # Read in max 1MB chunks
+                while remaining > 0:
+                    read_size = min(1024 * 1024, remaining)
+                    data = f.read(read_size)
+                    if not data:
+                        break
+                    remaining -= len(data)
+                    yield data
+
+        media_type, _ = mimetypes.guess_type(str(full))
+        return StreamingResponse(
+            ranged_file_iterator(start, chunk_size),
+            status_code=206,
+            media_type=media_type or 'application/octet-stream',
+            headers={
+                'Accept-Ranges': 'bytes',
+                'Content-Range': f'bytes {start}-{end}/{file_size}',
+                'Content-Length': str(chunk_size)
+            }
+        )
     app.mount(
         '/',
         SPAStaticFiles(directory=WEB_GUI_LOCATION, html=True),
@@ -311,7 +439,7 @@ def build_app() -> FastAPI:
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog='downtify')
+    parser = argparse.ArgumentParser(prog='hify')
     # The legacy entrypoint passed ``web`` as the subcommand plus a few
     # spotdl-only flags. We accept and ignore the unsupported ones so
     # existing Docker images keep starting cleanly.
@@ -350,7 +478,7 @@ def main() -> None:
     server = Server(config)
 
     logger.info(
-        'Starting Downtify {} on http://{}:{}',
+        'Starting Hify {} on http://{}:{}',
         __version__,
         args.host,
         args.port,

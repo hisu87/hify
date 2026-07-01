@@ -1,6 +1,6 @@
-# Contributing to Downtify
+# Contributing to Hify
 
-Thanks for your interest in improving Downtify! This document describes how to set up the project locally, the coding and formatting standards every contribution must follow, and the workflow for submitting changes.
+Thanks for your interest in improving Hify! This document describes how to set up the project locally, the coding and formatting standards every contribution must follow, and the workflow for submitting changes.
 
 By submitting a pull request you agree that your contribution is licensed under the project's [GPL-3.0](./LICENSE) license.
 
@@ -34,7 +34,7 @@ Be respectful, constructive, and patient. Reviews focus on code, not on the cont
 
 ## Ways to contribute
 
-- Fixing a bug from the [issues page](https://github.com/henriquesebastiao/downtify/issues).
+- Fixing a bug from the [issues page](https://github.com/hisu87/hify/issues).
 - Adding a feature that has been discussed and accepted in an issue or discussion.
 - Improving documentation (`README.md`, in-repo docs, or the `zensical` site under `docs/`).
 - Adding or improving tests, especially around the Spotify embed scraping, yt-dlp pipeline, and tag embedding.
@@ -47,13 +47,13 @@ For non-trivial changes, **open an issue first** to align on scope before writin
 
 ## Project overview
 
-Downtify is a self-hosted Spotify downloader. It resolves track/album/playlist metadata from the public `open.spotify.com/embed` endpoints (no Spotify Premium / Web API key required), pulls audio from YouTube via `yt-dlp`, transcodes with `ffmpeg`, and embeds cover art plus ID3 / Vorbis / MP4 metadata via `mutagen`. The backend is FastAPI, the frontend is a Vue 3 SPA, and everything ships as a Docker image.
+Hify is a self-hosted Spotify downloader. It resolves track/album/playlist metadata from the public `open.spotify.com/embed` endpoints (no Spotify Premium / Web API key required), pulls audio from YouTube via `yt-dlp`, transcodes with `ffmpeg`, and embeds cover art plus ID3 / Vorbis / MP4 metadata via `mutagen`. The backend is FastAPI, the frontend is a Vue 3 SPA, and everything ships as a Docker image.
 
 Repository layout:
 
 ```
 main.py                # FastAPI boot, logging, CLI args, static SPA serving
-downtify/
+hify/
   api.py               # FastAPI router
   downloader.py        # yt-dlp wrapper, file naming, sanitization
   spotify.py           # open.spotify.com/embed scraping + playlist pagination
@@ -95,11 +95,11 @@ The Python version is pinned in `.python-version`. `uv` will pick it up automati
 
 ```bash
 # 1. Fork the repo on GitHub, then clone your fork
-git clone https://github.com/<your-username>/downtify.git
-cd downtify
+git clone https://github.com/<your-username>/hify.git
+cd hify
 
 # 2. Add the upstream remote so you can keep your fork up to date
-git remote add upstream https://github.com/henriquesebastiao/downtify.git
+git remote add upstream https://github.com/hisu87/hify.git
 
 # 3. Install Python dependencies (creates .venv via uv)
 uv sync
@@ -124,7 +124,7 @@ make run
 # equivalent to: uv run python main.py web
 ```
 
-This starts FastAPI + Uvicorn on `DOWNTIFY_PORT` (default `8000`). In production the backend serves `frontend/dist`. During development you typically want the Vite dev server side-by-side:
+This starts FastAPI + Uvicorn on `HIFY_PORT` (default `8000`). In production the backend serves `frontend/dist`. During development you typically want the Vite dev server side-by-side:
 
 ### Frontend (development)
 
@@ -170,7 +170,7 @@ make doc     # uv run zensical serve
 
 ### API stability
 
-The Vue frontend depends on the exact endpoint paths and response shapes documented in `downtify/api.py`'s module docstring. **Do not rename or change existing endpoints in a breaking way.** Add new endpoints instead, and update the frontend in the same PR.
+The Vue frontend depends on the exact endpoint paths and response shapes documented in `hify/api.py`'s module docstring. **Do not rename or change existing endpoints in a breaking way.** Add new endpoints instead, and update the frontend in the same PR.
 
 ### Frontend (Vue / JS)
 
@@ -288,7 +288,7 @@ Reviews are an exchange. Expect to iterate. Keep responses to review comments fo
 ## Branching and releases
 
 - All work targets the `main` branch via PR. There is no long-lived develop branch.
-- Release versioning follows [Semantic Versioning](https://semver.org/). Versions live in `pyproject.toml`, `downtify/__init__.py`, `frontend/package.json`, `Makefile`, and the `Dockerfile` labels — keep them in sync.
+- Release versioning follows [Semantic Versioning](https://semver.org/). Versions live in `pyproject.toml`, `hify/__init__.py`, `frontend/package.json`, `Makefile`, and the `Dockerfile` labels — keep them in sync.
 - Maintainers bump the version with `make version X.Y.Z`, which runs `version.sh`, rebuilds the frontend, and re-formats the tree. Contributors should **not** bump the version in their PRs.
 - The changelog is generated with `make changelog` (uses `github_changelog_generator`).
 
@@ -296,8 +296,8 @@ Reviews are an exchange. Expect to iterate. Keep responses to review comments fo
 
 ## Reporting bugs and requesting features
 
-- Use the [issues page](https://github.com/henriquesebastiao/downtify/issues) and pick the appropriate template.
-- For bugs, include: Downtify version, deployment method (Docker vs. local), OS, exact reproduction steps, expected vs. actual behavior, and relevant log output. If a specific Spotify URL triggers the bug, include it — the project deliberately uses only public endpoints, so the URL is not sensitive.
+- Use the [issues page](https://github.com/hisu87/hify/issues) and pick the appropriate template.
+- For bugs, include: Hify version, deployment method (Docker vs. local), OS, exact reproduction steps, expected vs. actual behavior, and relevant log output. If a specific Spotify URL triggers the bug, include it — the project deliberately uses only public endpoints, so the URL is not sensitive.
 - For feature requests, describe the problem first, then the proposed solution. Features that require Spotify Premium credentials or the Spotify Web API will not be accepted.
 
 ---

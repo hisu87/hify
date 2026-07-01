@@ -11,13 +11,13 @@
           v-if="!layout.isLeftSidebarCollapsed.value"
           src="../assets/14884.png"
           class="h-[80px] w-auto object-contain"
-          alt="Downtify"
+          alt="Hify"
         />
         <img
           v-else
           src="../assets/14882.png"
           class="h-[40px] w-auto object-contain"
-          alt="Downtify"
+          alt="Hify"
         />
       </div>
     </div>
@@ -194,8 +194,8 @@ import { useLayout } from '../model/layout'
 
 const route = useRoute()
 const themeMgr = useBinaryThemeManager({
-  newLightAlias: 'downtify-light',
-  newDarkAlias: 'downtify-dark',
+  newLightAlias: 'hify-light',
+  newDarkAlias: 'hify-dark',
 })
 const pt = useProgressTracker()
 const layout = useLayout()

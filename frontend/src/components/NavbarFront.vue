@@ -5,10 +5,10 @@
     >
       <div class="flex items-center gap-2">
         <img
-          src="../assets/downtify.svg"
+          src="../assets/hify.svg"
           class="h-8 w-8 drop-shadow-[0_0_8px_rgba(26,208,92,0.55)]"
         />
-        <span class="text-lg font-bold tracking-tight">Downtify</span>
+        <span class="text-lg font-bold tracking-tight">Hify</span>
       </div>
       <div class="ml-auto flex items-center gap-1 sm:gap-2">
         <button
@@ -89,8 +89,8 @@ import { useProgressTracker } from '../model/download'
 import { useI18n } from '../i18n'
 
 const themeMgr = useBinaryThemeManager({
-  newLightAlias: 'downtify-light',
-  newDarkAlias: 'downtify-dark',
+  newLightAlias: 'hify-light',
+  newDarkAlias: 'hify-dark',
 })
 const pt = useProgressTracker()
 const { t } = useI18n()

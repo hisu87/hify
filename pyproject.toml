@@ -1,27 +1,30 @@
 [project]
-name = "downtify"
-version = "2.8.0"
+name = "hify"
+version = "3.3.0"
 description = "Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "fastapi>=0.110",
+    "aiosqlite>=0.22.1",
+    "fastapi>=0.138.0",
+    "httpx>=0.28.1",
     "load-dotenv>=0.1.0",
     "loguru>=0.7.3",
     "mutagen>=1.47",
     "requests>=2.34.1",
+    "syncedlyrics>=1.0.1",
     "uvicorn>=0.49.0",
     "websockets>=12.0",
-    "yt-dlp>=2026.2.4",
-    "ytmusicapi>=1.10",
+    "yt-dlp>=2026.6.9",
+    "ytmusicapi>=1.12.1",
 ]
 
 [dependency-groups]
 dev = [
     "codeflash>=0.20.6",
-    "pytest>=8.0",
-    "ruff>=0.15.15",
-    "zensical>=0.0.44",
+    "pytest>=9.1.1",
+    "ruff>=0.15.18",
+    "zensical>=0.0.46",
 ]
 
 [tool.pytest.ini_options]
@@ -47,12 +50,12 @@ quote-style = 'single'
 [tool.ruff.lint.per-file-ignores]
 "main.py" = ["E501", "PLR0915", "PLR2004", "PLR1702", "PLR0912", "PLR0911"]
 "downloader.py" = ["PLC1901"]
-"downtify/*.py" = ["E501", "PLR0913", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916"]
+"hify/*.py" = ["E501", "PLR0917", "PLR2004", "PLW0603", "PLR0911", "PLR0915", "PLR0912", "PLR0916"]
 "tests/*.py" = ["PLR2004", "PLC2701", "E501"]
 
 [tool.codeflash]
 # All paths are relative to this pyproject.toml's directory.
-module-root = "downtify"
+module-root = "hify"
 tests-root = "tests"
 ignore-paths = []
 formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]

@@ -80,10 +80,10 @@ export class CubicSpline {
  * - Nhấn nhẹ tại ~60% rồi về 1.0 lúc kết thúc
  */
 export const SCALE_CURVE = new CubicSpline([
-  { t: 0.0, v: 0.98 },
-  { t: 0.18, v: 1.005 },
-  { t: 0.6, v: 1.018 },
-  { t: 0.85, v: 1.008 },
+  { t: 0.0, v: 1.0 },
+  { t: 0.08, v: 0.97 },
+  { t: 0.35, v: 1.06 },
+  { t: 0.7, v: 1.01 },
   { t: 1.0, v: 1.0 },
 ])
 

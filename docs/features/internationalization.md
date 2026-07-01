@@ -4,7 +4,7 @@ icon: lucide/languages
 
 # Internationalization
 
-Downtify's UI is fully translatable. The default language is **English**, with **Spanish** and **Brazilian Portuguese** included out of the box.
+Hify's UI is fully translatable. The default language is **English**, with **Spanish** and **Brazilian Portuguese** included out of the box.
 
 ## Switching language
 

@@ -4,7 +4,7 @@ icon: lucide/mic-vocal
 
 # Lyrics
 
-Downtify can download lyrics and embed them directly into audio files at download time.
+Hify can download lyrics and embed them directly into audio files at download time.
 
 ## Enabling lyrics
 
@@ -30,7 +30,7 @@ lrclib is queried with the track title, primary artist, album name and duration.
 
 ## Sidecar .lrc file
 
-When synced lyrics are available, Downtify also saves a `.lrc` file next to the audio file with the same base name. This lets media players that support external lyrics files (like Jellyfin or certain portable players) show the time-synced lyrics independently of the embedded tags.
+When synced lyrics are available, Hify also saves a `.lrc` file next to the audio file with the same base name. This lets media players that support external lyrics files (like Jellyfin or certain portable players) show the time-synced lyrics independently of the embedded tags.
 
 ## Fallback behaviour
 
@@ -38,7 +38,7 @@ If lrclib returns no result for a track, the download continues normally — the
 
 ## Legacy providers
 
-The settings UI may show `genius`, `musixmatch` and `azlyrics` as options inherited from an earlier version of Downtify. These are **no-ops** — selecting them has no effect. Only `lrclib` fetches real lyrics.
+The settings UI may show `genius`, `musixmatch` and `azlyrics` as options inherited from an earlier version of Hify. These are **no-ops** — selecting them has no effect. Only `lrclib` fetches real lyrics.
 
 Để phân tích sâu phần animation, mình sẽ clone trực tiếp source code về để đọc, vì GitHub không cho crawl trực tiếp trang tree.Đã clone repo về và đọc thẳng source (`src/utils/Lyrics/Animator/Lyrics/LyricsAnimator.ts`, `src/modules/Spring.ts`, `LyricsVirtualizer.ts`...). Đây là một engine animation khá tinh vi, không hề dùng CSS transition đơn giản. Phân tích chi tiết:
 

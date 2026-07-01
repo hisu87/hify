@@ -2,11 +2,11 @@
 
 Guidance for Claude Code when working in this repository. Read before editing.
 
-## What Downtify is
+## What Hify is
 
 Self-hosted Spotify downloader. Resolves track/album/playlist metadata from the public `open.spotify.com/embed` endpoints (no Spotify Premium / Web API key needed), then pulls audio from YouTube via `yt-dlp`, transcodes with `ffmpeg`, and embeds cover art + ID3/Vorbis/MP4 metadata via `mutagen`. Ships a FastAPI backend + Vue 3 SPA, distributed as a Docker image.
 
-Entry point: `main.py` (CLI flag `web` boots the FastAPI app on `DOWNTIFY_PORT`, default `8000`).
+Entry point: `main.py` (CLI flag `web` boots the FastAPI app on `HIFY_PORT`, default `8000`).
 
 ## Stack
 
@@ -21,7 +21,7 @@ Entry point: `main.py` (CLI flag `web` boots the FastAPI app on `DOWNTIFY_PORT`,
 
 ```
 main.py                # FastAPI boot, logging, static SPA serving, cover extraction, CLI args
-downtify/
+hify/
   api.py               # FastAPI router (endpoints listed in its module docstring)
   downloader.py        # yt-dlp wrapper, file naming, sanitization
   spotify.py           # open.spotify.com/embed scraping + anonymous-token playlist pagination
@@ -49,19 +49,19 @@ make doc        # zensical serve (docs preview)
 
 Frontend dev: `npm --prefix frontend run dev` (Vite). The backend serves `frontend/dist` in production; during dev the SPA proxies API calls.
 
-Version bump: `make version 2.7.1` — runs `version.sh`, rebuilds the frontend, formats. Keep `pyproject.toml`, `downtify/__init__.py`, `frontend/package.json`, `Makefile`, and `Dockerfile` labels in sync (the script handles this).
+Version bump: `make version 2.7.1` — runs `version.sh`, rebuilds the frontend, formats. Keep `pyproject.toml`, `hify/__init__.py`, `frontend/package.json`, `Makefile`, and `Dockerfile` labels in sync (the script handles this).
 
 ## Coding standards
 
-- Ruff is the single source of truth. `line-length = 79`, single quotes, `preview = true`, rules `I, F, E, W, PL, PT`. Per-file ignores already exist for `main.py`, `downloader.py`, `downtify/*.py`, and `tests/*.py` — **don't widen them**, fix the code instead.
+- Ruff is the single source of truth. `line-length = 79`, single quotes, `preview = true`, rules `I, F, E, W, PL, PT`. Per-file ignores already exist for `main.py`, `downloader.py`, `hify/*.py`, and `tests/*.py` — **don't widen them**, fix the code instead.
 - Type hints required on public functions and any new code. Use `from __future__ import annotations` (existing convention).
 - Logging: use `loguru` (`from loguru import logger`). Stdlib `logging` is intercepted in `main.py:_InterceptHandler` — do not reconfigure it.
-- Keep the existing API surface stable. The Vue frontend depends on the exact endpoint shapes documented in `downtify/api.py`'s module docstring. Add new endpoints rather than renaming.
+- Keep the existing API surface stable. The Vue frontend depends on the exact endpoint shapes documented in `hify/api.py`'s module docstring. Add new endpoints rather than renaming.
 - No new top-level dependencies without a clear need — `yt-dlp`, `mutagen`, `ytmusicapi`, `fastapi`, `loguru` cover the vast majority of cases.
 
 ## Domain gotchas (do not rediscover these)
 
-- **Spotify embed schema**: playlist tracks expose `subtitle` (joined artist string), **not** an `artists` list, and have **no per-track cover** — fall back to the playlist cover. See `downtify/spotify.py`.
+- **Spotify embed schema**: playlist tracks expose `subtitle` (joined artist string), **not** an `artists` list, and have **no per-track cover** — fall back to the playlist cover. See `hify/spotify.py`.
 - **Playlist size cap**: the embed endpoint caps at ~50–100 tracks. Full playlists require the anonymous token + `api.spotify.com` pagination path already implemented in `spotify.py`. Don't replace it with the embed-only path.
 - **yt-dlp anti-bot**: defaults use `player_client=tv,mweb` plus cookies / IPv4 env knobs. If YouTube returns "Sign in to confirm" errors, tune these in `downloader.py` rather than switching extractors.
 - **Lyrics**: only `lrclib` is wired end-to-end. `genius` / `musixmatch` / `azlyrics` exist as UI stubs — do not claim they work in docs.
@@ -96,7 +96,7 @@ Version bump: `make version 2.7.1` — runs `version.sh`, rebuilds the frontend,
 
 ## Useful entry points when investigating
 
-- Download lifecycle: `downtify/api.py` (`POST /api/download/url`) → `downtify/downloader.py:Downloader` → `downtify/providers.py` (search) → `mutagen` tag write → `downtify/lyrics.py`.
-- Playlist sync: `downtify/monitor.py:monitor_loop` + `PlaylistMonitorDB` (sqlite under `/data`).
-- WebSocket progress: `downtify/api.py:ConnectionManager` (`WS /api/ws`).
+- Download lifecycle: `hify/api.py` (`POST /api/download/url`) → `hify/downloader.py:Downloader` → `hify/providers.py` (search) → `mutagen` tag write → `hify/lyrics.py`.
+- Playlist sync: `hify/monitor.py:monitor_loop` + `PlaylistMonitorDB` (sqlite under `/data`).
+- WebSocket progress: `hify/api.py:ConnectionManager` (`WS /api/ws`).
 - Static SPA + cover serving: `main.py:build_app`, `main.py:SPAStaticFiles`, `main.py:_extract_cover`.

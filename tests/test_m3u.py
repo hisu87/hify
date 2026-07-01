@@ -1,10 +1,10 @@
-"""Tests for ``downtify.m3u``."""
+"""Tests for ``hify.m3u``."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from downtify import m3u
+from hify import m3u
 
 # --- sanitize_playlist_name ------------------------------------------------
 

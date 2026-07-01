@@ -129,7 +129,7 @@ def _pick_best(
 def fetch_genre(song: dict[str, Any]) -> str:
     """Return the genre string for *song*, or ``""`` if unavailable.
 
-    ``song`` is the standard Downtify track dict with at least
+    ``song`` is the standard Hify track dict with at least
     ``name``, ``artists`` (list[str]) and optionally ``album_name``.
     """
 

@@ -4,7 +4,7 @@ icon: lucide/file-headphone
 
 # File Organization
 
-By default Downtify saves files in a flat layout. An optional *Organize by artist* mode groups them into per-artist subfolders.
+By default Hify saves files in a flat layout. An optional *Organize by artist* mode groups them into per-artist subfolders.
 
 ## Default layout (flat)
 

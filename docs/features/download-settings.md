@@ -61,15 +61,15 @@ The limit applies to every download — both individual tracks and batch playlis
 
 ## Audio provider
 
-Currently the only supported audio provider is **YouTube Music**. Downtify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search for the best match by comparing track duration.
+Currently the only supported audio provider is **YouTube Music**. Hify uses [`ytmusicapi`](https://ytmusicapi.readthedocs.io/) to search for the best match by comparing track duration.
 
 ### Force a specific audio source
 
-If Downtify picks the wrong YouTube Music video (e.g. a cover instead of the original), you can override it per track:
+If Hify picks the wrong YouTube Music video (e.g. a cover instead of the original), you can override it per track:
 
 **Option A — paste a YouTube Music URL directly**
 
-Paste `https://music.youtube.com/watch?v=…` (or a regular `youtube.com/watch?v=…` URL) into the search bar and hit download. Downtify fetches the audio from that exact video.
+Paste `https://music.youtube.com/watch?v=…` (or a regular `youtube.com/watch?v=…` URL) into the search bar and hit download. Hify fetches the audio from that exact video.
 
 !!! note
     When downloading via YouTube URL, metadata (title, artist, cover) comes from YouTube rather than Spotify. For clean tags, use Option B.
@@ -80,11 +80,11 @@ Paste `https://music.youtube.com/watch?v=…` (or a regular `youtube.com/watch?v
 2. Paste a YouTube or YouTube Music URL into the input that appears.
 3. Press **Enter** or click **Apply**.
 
-Downtify re-downloads the track using that exact video while keeping all Spotify metadata (title, artist, album, cover art, lyrics).
+Hify re-downloads the track using that exact video while keeping all Spotify metadata (title, artist, album, cover art, lyrics).
 
 ## Embedded metadata
 
-Downtify embeds the following tags in every downloaded file, regardless of format:
+Hify embeds the following tags in every downloaded file, regardless of format:
 
 | Tag | Source |
 |-----|--------|

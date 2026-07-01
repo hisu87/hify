@@ -16,13 +16,13 @@ usage() {
 # helpers
 
 current_version() {
-  grep -m1 "__version__" "$REPO_ROOT/downtify/__init__.py" \
+  grep -m1 "__version__" "$REPO_ROOT/hify/__init__.py" \
     | sed "s/__version__ = '//;s/'//"
 }
 
 validate_semver() {
-  if ! echo "$1" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-    echo "Error: '$1' is not a valid semver version (expected X.Y.Z)." >&2
+  if ! echo "$1" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$'; then
+    echo "Error: '$1' is not a valid semver version (expected X.Y.Z[-suffix])." >&2
     exit 1
   fi
 }
@@ -48,11 +48,11 @@ fi
 
 echo "Bumping $OLD_VERSION → $NEW_VERSION"
 
-# downtify/__init__.py
+# hify/__init__.py
 
 sed -i "s/__version__ = '${OLD_VERSION}'/__version__ = '${NEW_VERSION}'/" \
-  "$REPO_ROOT/downtify/__init__.py"
-echo "  updated downtify/__init__.py"
+  "$REPO_ROOT/hify/__init__.py"
+echo "  updated hify/__init__.py"
 
 # pyproject.toml
 
@@ -68,7 +68,7 @@ echo "  updated frontend/package.json"
 
 # Makefile
 
-sed -i "s/DOWNTIFY_VERSION := ${OLD_VERSION}/DOWNTIFY_VERSION := ${NEW_VERSION}/" \
+sed -i "s/HIFY_VERSION := ${OLD_VERSION}/HIFY_VERSION := ${NEW_VERSION}/" \
   "$REPO_ROOT/Makefile"
 echo "  updated Makefile"
 
@@ -90,7 +90,7 @@ echo "  updated frontend/src/components/Hero.vue"
 
 echo
 echo "Verification:"
-grep "__version__"                    "$REPO_ROOT/downtify/__init__.py"
+grep "__version__"                    "$REPO_ROOT/hify/__init__.py"
 grep "^version"                       "$REPO_ROOT/pyproject.toml"
 grep '"version"'                      "$REPO_ROOT/frontend/package.json" | head -1
 grep 'LABEL version'                  "$REPO_ROOT/Dockerfile"

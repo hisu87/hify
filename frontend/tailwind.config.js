@@ -4,7 +4,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        downtify: {
+        hify: {
           50: '#e6fbf0',
           100: '#c5f4d8',
           200: '#88e9b1',
@@ -68,7 +68,7 @@ module.exports = {
   daisyui: {
     themes: [
       {
-        'downtify-dark': {
+        'hify-dark': {
           primary: '#FA233B',
           'primary-focus': '#d21c30',
           'primary-content': '#ffffff',
@@ -97,7 +97,7 @@ module.exports = {
         },
       },
       {
-        'downtify-light': {
+        'hify-light': {
           primary: '#FA233B',
           'primary-focus': '#d21c30',
           'primary-content': '#ffffff',
@@ -126,7 +126,7 @@ module.exports = {
         },
       },
     ],
-    darkTheme: 'downtify-dark',
+    darkTheme: 'hify-dark',
   },
   plugins: [require('daisyui')],
 }

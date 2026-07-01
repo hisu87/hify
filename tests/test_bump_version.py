@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 SCRIPT = Path(__file__).parents[1] / 'version.sh'
 
@@ -15,12 +18,16 @@ def test_script_exists():
 
 
 def test_script_is_executable():
+    if sys.platform == 'win32':
+        pytest.skip('Executable bit check not applicable on Windows')
     assert SCRIPT.stat().st_mode & 0o111, 'version.sh is not executable'
 
 
 def test_current_flag_returns_valid_semver():
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     result = subprocess.run(
-        [str(SCRIPT), '--current'],
+        ['bash', str(SCRIPT), '--current'],
         capture_output=True,
         text=True,
         check=False,
@@ -33,8 +40,10 @@ def test_current_flag_returns_valid_semver():
 
 
 def test_invalid_semver_rejected():
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     result = subprocess.run(
-        [str(SCRIPT), 'not-semver'],
+        ['bash', str(SCRIPT), 'not-semver'],
         capture_output=True,
         text=True,
         check=False,
@@ -43,8 +52,10 @@ def test_invalid_semver_rejected():
 
 
 def test_missing_argument_shows_usage():
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     result = subprocess.run(
-        [str(SCRIPT)],
+        ['bash', str(SCRIPT)],
         capture_output=True,
         text=True,
         check=False,
@@ -54,8 +65,8 @@ def test_missing_argument_shows_usage():
 
 def _setup_fake_repo(base: Path) -> None:
     """Create minimal stubs of every file that version.sh updates."""
-    (base / 'downtify').mkdir()
-    (base / 'downtify' / '__init__.py').write_text(
+    (base / 'hify').mkdir()
+    (base / 'hify' / '__init__.py').write_text(
         "__version__ = '1.0.0'\n", encoding='utf-8'
     )
     (base / 'pyproject.toml').write_text(
@@ -66,7 +77,7 @@ def _setup_fake_repo(base: Path) -> None:
         '{\n  "version": "1.0.0"\n}\n', encoding='utf-8'
     )
     (base / 'Makefile').write_text(
-        'DOWNTIFY_VERSION := 1.0.0\n', encoding='utf-8'
+        'HIFY_VERSION := 1.0.0\n', encoding='utf-8'
     )
     (base / 'Dockerfile').write_text(
         'LABEL version="1.0.0"\n'
@@ -82,6 +93,8 @@ def _setup_fake_repo(base: Path) -> None:
 
 
 def test_bump_updates_all_three_files(tmp_path):
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     _setup_fake_repo(tmp_path)
     script_copy = tmp_path / 'version.sh'
     shutil.copy(SCRIPT, script_copy)
@@ -97,14 +110,14 @@ def test_bump_updates_all_three_files(tmp_path):
 
     assert (
         "__version__ = '2.3.4'"
-        in (tmp_path / 'downtify' / '__init__.py').read_text()
+        in (tmp_path / 'hify' / '__init__.py').read_text()
     )
     assert 'version = "2.3.4"' in (tmp_path / 'pyproject.toml').read_text()
     assert (
         '"version": "2.3.4"'
         in (tmp_path / 'frontend' / 'package.json').read_text()
     )
-    assert 'DOWNTIFY_VERSION := 2.3.4' in (tmp_path / 'Makefile').read_text()
+    assert 'HIFY_VERSION := 2.3.4' in (tmp_path / 'Makefile').read_text()
     dockerfile = (tmp_path / 'Dockerfile').read_text()
     assert 'LABEL version="2.3.4"' in dockerfile
     assert 'org.opencontainers.image.version="2.3.4"' in dockerfile
@@ -117,6 +130,8 @@ def test_bump_updates_all_three_files(tmp_path):
 
 
 def test_bump_noop_when_already_at_target(tmp_path):
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     _setup_fake_repo(tmp_path)
     script_copy = tmp_path / 'version.sh'
     shutil.copy(SCRIPT, script_copy)
@@ -133,6 +148,8 @@ def test_bump_noop_when_already_at_target(tmp_path):
 
 
 def test_current_flag_in_fake_repo(tmp_path):
+    if sys.platform == 'win32':
+        pytest.skip('Bash tests are unstable on Windows')
     _setup_fake_repo(tmp_path)
     script_copy = tmp_path / 'version.sh'
     shutil.copy(SCRIPT, script_copy)

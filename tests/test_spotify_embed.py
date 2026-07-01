@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from downtify.spotify import (
+from hify.spotify import (
     _album_release_date_from_open_page,
     _artist_names,
     _artists_from_subtitle,
@@ -145,7 +145,7 @@ def test_open_page_parses_music_release_meta():
     mock_resp = MagicMock()
     mock_resp.text = html
     mock_resp.raise_for_status = lambda: None
-    with patch('downtify.spotify.requests.get', return_value=mock_resp):
+    with patch('hify.spotify.requests.get', return_value=mock_resp):
         assert _album_release_date_from_open_page(
             '4J7wEPiFH5EjMFzqec4E2k'
         ) == ('2025-10-03')
@@ -169,9 +169,9 @@ def test_album_tracks_fallback_open_page_when_embed_missing():
         },
     }
     with (
-        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('hify.spotify._fetch_embed_json', return_value=payload),
         patch(
-            'downtify.spotify._album_release_date_from_open_page',
+            'hify.spotify._album_release_date_from_open_page',
             return_value='2025-10-03',
         ),
     ):
@@ -198,7 +198,7 @@ def test_album_tracks_inherit_album_release_date():
             'pageProps': {'state': {'data': {'entity': entity}}},
         },
     }
-    with patch('downtify.spotify._fetch_embed_json', return_value=payload):
+    with patch('hify.spotify._fetch_embed_json', return_value=payload):
         songs = album_tracks_from_id('dummy')
     assert len(songs) == 1
     assert songs[0]['release_date'] == '2021-11-30'
@@ -244,13 +244,13 @@ def test_album_tracks_from_id_merges_row_subtitle():
     }
 
     with (
-        patch('downtify.spotify._fetch_embed_json', return_value=payload),
+        patch('hify.spotify._fetch_embed_json', return_value=payload),
         patch(
-            'downtify.spotify._album_release_date_from_open_page',
+            'hify.spotify._album_release_date_from_open_page',
             return_value='',
         ),
     ):
-        songs = album_tracks_from_id('dummyAlbumId')
+        songs = album_tracks_from_id('dummyAlbumId2')
 
     assert len(songs) == 1
     assert songs[0]['song_id'] == 't1'
@@ -259,3 +259,25 @@ def test_album_tracks_from_id_merges_row_subtitle():
     assert songs[0]['album_name'] == 'TestAlbum'
     assert songs[0]['track_number'] == 1
     assert songs[0]['album_track_total'] == 1
+
+
+def test_album_release_date_open_page_is_cached():
+    """Verify identical album ID lookups trigger only one network HTTP dispatch."""
+    # Clear cache state to ensure clean test execution
+    _album_release_date_from_open_page.cache_clear()
+
+    mock_resp = MagicMock()
+    mock_resp.text = '<meta name="music:release_date" content="1997-05-21"/>'
+    mock_resp.raise_for_status = lambda: None
+
+    with patch(
+        'hify.spotify.requests.get', return_value=mock_resp
+    ) as mock_get:
+        res1 = _album_release_date_from_open_page('cacheTestAlbum123')
+        res2 = _album_release_date_from_open_page('cacheTestAlbum123')
+
+        assert res1 == '1997-05-21'
+        assert res2 == '1997-05-21'
+        # Network must only be hit once
+        assert mock_get.call_count == 1
+        assert _album_release_date_from_open_page.cache_info().hits == 1

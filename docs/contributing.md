@@ -8,11 +8,11 @@ Contributions are welcome — bug reports, feature requests, code and translatio
 
 ## Issues and feature requests
 
-Use the [GitHub issue tracker](https://github.com/henriquesebastiao/downtify/issues). Before opening a new issue, search existing ones to avoid duplicates.
+Use the [GitHub issue tracker](https://github.com/hisu87/hify/issues). Before opening a new issue, search existing ones to avoid duplicates.
 
 For bug reports, include:
 
-- Downtify version
+- Hify version
 - How you installed it (Docker run, Docker Compose, Umbrel, …)
 - Steps to reproduce
 - What you expected vs. what happened
@@ -30,8 +30,8 @@ For bug reports, include:
 ### Clone and install
 
 ```bash
-git clone https://github.com/henriquesebastiao/downtify.git
-cd downtify
+git clone https://github.com/hisu87/hify.git
+cd hify
 
 # Python dependencies
 uv sync
@@ -69,8 +69,8 @@ The compiled assets land in `frontend/dist/` and are served by the backend.
 ## Project structure
 
 ```
-downtify/
-├── downtify/          # Python backend
+hify/
+├── hify/          # Python backend
 │   ├── api.py         # FastAPI router
 │   ├── downloader.py  # yt-dlp + mutagen pipeline
 │   ├── spotify.py     # Spotify embed scraping
@@ -98,4 +98,4 @@ See the [Internationalization](features/internationalization.md) page for a step
 - Run `uv run pytest` before submitting
 - Open the PR against `main`
 
-If Downtify has been useful to you, consider leaving a star on GitHub — it helps the project grow.
+If Hify has been useful to you, consider leaving a star on GitHub — it helps the project grow.
