@@ -16,7 +16,9 @@
     >
       <div class="flex flex-1 min-h-0 relative">
         <Sidebar />
-        <main class="relative flex-1 min-w-0 transition-all duration-300 overflow-y-auto">
+        <main
+          class="relative flex-1 min-w-0 transition-all duration-300 overflow-y-auto"
+        >
           <div
             class="mx-auto flex w-full max-w-[1600px] flex-col px-4 pt-4 sm:px-6 lg:px-8 lg:pt-6 h-full"
           >
@@ -31,7 +33,7 @@
         </main>
         <NowPlayingSidebar />
       </div>
-      
+
       <!-- Fixed PlayerBar at the bottom -->
       <div class="fixed bottom-0 left-0 w-full z-50">
         <PlayerBar

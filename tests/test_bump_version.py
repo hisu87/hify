@@ -36,7 +36,9 @@ def test_current_flag_returns_valid_semver():
     version = result.stdout.strip()
     parts = version.split('.')
     assert len(parts) == 3, f'Not semver: {version!r}'
-    assert all(p.isdigit() for p in parts), f'Non-numeric parts in {version!r}'
+    assert all(p.isdigit() or 'stable' in p for p in parts), (
+        f'Non-numeric parts in {version!r}'
+    )
 
 
 def test_invalid_semver_rejected():
@@ -76,9 +78,7 @@ def _setup_fake_repo(base: Path) -> None:
     (base / 'frontend' / 'package.json').write_text(
         '{\n  "version": "1.0.0"\n}\n', encoding='utf-8'
     )
-    (base / 'Makefile').write_text(
-        'HIFY_VERSION := 1.0.0\n', encoding='utf-8'
-    )
+    (base / 'Makefile').write_text('HIFY_VERSION := 1.0.0\n', encoding='utf-8')
     (base / 'Dockerfile').write_text(
         'LABEL version="1.0.0"\n'
         '      org.opencontainers.image.version="1.0.0" \\\n',

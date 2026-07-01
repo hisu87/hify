@@ -354,18 +354,31 @@ class Downloader:
         cookies_file = os.getenv('HIFY_COOKIES_FILE', '').strip()
         if cookies_file:
             ydl_opts['cookiefile'] = cookies_file
-        cookies_browser = os.getenv(
-            'HIFY_COOKIES_FROM_BROWSER', ''
-        ).strip()
+        cookies_browser = os.getenv('HIFY_COOKIES_FROM_BROWSER', '').strip()
         if cookies_browser:
             parts = cookies_browser.split(':', 1)
             ydl_opts['cookiesfrombrowser'] = (
                 (parts[0],) if len(parts) == 1 else (parts[0], parts[1])
             )
 
+        import time
+
         url = f'https://music.youtube.com/watch?v={video_id}'
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
+                break  # Exit loop if successful
+            except Exception as e:
+                logger.error(
+                    f'Download failed for {url} (Attempt {attempt + 1}/{max_retries}): {e}'
+                )
+                if attempt < max_retries - 1:
+                    time.sleep(2)
+                else:
+                    raise
 
         final_path = target_dir / f'{basename}.{self.audio_format}'
         if not final_path.exists():
