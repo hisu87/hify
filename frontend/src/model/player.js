@@ -134,9 +134,16 @@ function rebuildQueueShuffle() {
 }
 
 function setPlaylist(files, options = {}) {
-  const tracks = (files || []).map((f) =>
-    typeof f === 'string' ? trackFromFile(f) : f
-  )
+  const tracks = (files || []).map((f) => {
+    if (typeof f === 'string') return trackFromFile(f)
+    return {
+      ...f,
+      url: f.url || fileUrl(f.file),
+      cover: f.cover || (f.cover_url ? (f.cover_url.startsWith('http') ? f.cover_url : `/${f.cover_url}`) : coverUrl(f.file)),
+      title: f.title || f.file,
+      artist: f.artist || ''
+    }
+  })
   playlist.value = tracks
   if (currentIndex.value >= tracks.length) currentIndex.value = -1
   if (shuffle.value) buildShuffleOrder()
@@ -390,8 +397,16 @@ function prev() {
 }
 
 function addToQueue(fileOrTrack) {
-  const track =
-    typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
+  let track = typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
+  if (!track.url) {
+    track = {
+      ...track,
+      url: track.url || fileUrl(track.file),
+      cover: track.cover || (track.cover_url ? (track.cover_url.startsWith('http') ? track.cover_url : `/${track.cover_url}`) : coverUrl(track.file)),
+      title: track.title || track.file,
+      artist: track.artist || ''
+    }
+  }
   userQueue.value.push(track)
   if (shuffle.value) {
     const newIdx = userQueue.value.length - 1
@@ -403,8 +418,16 @@ function addToQueue(fileOrTrack) {
 }
 
 function playNext(fileOrTrack) {
-  const track =
-    typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
+  let track = typeof fileOrTrack === 'string' ? trackFromFile(fileOrTrack) : fileOrTrack
+  if (!track.url) {
+    track = {
+      ...track,
+      url: track.url || fileUrl(track.file),
+      cover: track.cover || (track.cover_url ? (track.cover_url.startsWith('http') ? track.cover_url : `/${track.cover_url}`) : coverUrl(track.file)),
+      title: track.title || track.file,
+      artist: track.artist || ''
+    }
+  }
   userQueue.value.unshift(track)
   if (shuffle.value) {
     for (let i = 0; i < shuffledQueueOrder.length; i++) {

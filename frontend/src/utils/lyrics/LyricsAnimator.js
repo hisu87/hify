@@ -181,7 +181,8 @@ export class LyricsAnimator {
         dt,
         isActiveLine,
         isSungLine,
-        isMobile
+        isMobile,
+        activeLineFrac
       )
       if (line.background) {
         this._processTokens(
@@ -192,7 +193,8 @@ export class LyricsAnimator {
           dt,
           isActiveLine,
           isSungLine,
-          isMobile
+          isMobile,
+          activeLineFrac
         )
       }
     }
@@ -219,7 +221,8 @@ export class LyricsAnimator {
     dt,
     isActiveLine,
     isSungLine,
-    isMobile
+    isMobile,
+    activeLineFrac
   ) {
     if (!tokens || !tokens.length) return
 
@@ -239,13 +242,18 @@ export class LyricsAnimator {
       opacity: 0,
     }))
 
+    let lineProgress = 0
+    if (isActiveLine) {
+      lineProgress = Math.max(0, Math.min(1, activeLineFrac - lineIdx))
+    }
+
     // First pass: Calculate base goals
     for (let wi = 0; wi < tokens.length; wi++) {
       const token = tokens[wi]
       const state = states[wi]
 
       if (state === TokenState.ACTIVE) {
-        const progress = Math.max(
+        const wordProgress = Math.max(
           0,
           Math.min(
             1,
@@ -253,15 +261,11 @@ export class LyricsAnimator {
               Math.max(token.endTime - token.startTime, 0.05)
           )
         )
-        goals[wi].scale = SCALE_CURVE.at(progress)
-        goals[wi].y = Y_OFFSET_CURVE.at(progress)
-        goals[wi].glow = GLOW_CURVE.at(progress)
-        goals[wi].fill = progress * 100
+        goals[wi].scale = SCALE_CURVE.at(wordProgress)
+        goals[wi].fill = wordProgress * 100
         goals[wi].opacity = 1.0
       } else if (state === TokenState.PAST) {
         goals[wi].scale = SCALE_SUNG
-        goals[wi].y = 0
-        goals[wi].glow = 0
         goals[wi].fill = 120
         goals[wi].opacity = 0.85
       } else {
@@ -276,9 +280,16 @@ export class LyricsAnimator {
           goals[wi].scale = 0.94
           goals[wi].opacity = 0.35
         }
+        goals[wi].fill = 0
+      }
+
+      // Line-level animations (Y offset and Glow)
+      if (isActiveLine) {
+        goals[wi].y = Y_OFFSET_CURVE.at(lineProgress)
+        goals[wi].glow = GLOW_CURVE.at(lineProgress)
+      } else {
         goals[wi].y = 0
         goals[wi].glow = 0
-        goals[wi].fill = 0
       }
     }
 

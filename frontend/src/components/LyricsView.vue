@@ -388,9 +388,13 @@ const isActive = computed(() => props.isOpen || props.inline)
 
 watch(
   isActive,
-  (active) => {
+  async (active) => {
     if (active) {
-      fetchLyrics()
+      // Always re-assign the correct audio deck element when panel opens
+      animator.audioElement = player.getAudio()
+      await fetchLyrics()
+      // Wait for Vue to render the lyric lines (v-for) before starting the loop
+      await nextTick()
       animator.start()
     } else {
       animator.stop()
@@ -402,6 +406,7 @@ watch(
 watch(
   () => currentTrack.value?.title,
   (newTitle) => {
+    animator.audioElement = player.getAudio()
     if (newTitle) prefetchLyrics()
     if (isActive.value) {
       parsedLyrics.value = []

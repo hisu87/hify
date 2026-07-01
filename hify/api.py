@@ -19,6 +19,7 @@ working without changes:
 from __future__ import annotations
 
 import asyncio
+import os
 import contextlib
 import json
 import re
@@ -59,7 +60,7 @@ def _effective_lyrics_providers(settings: dict[str, Any]) -> list[str]:
 
     selected = settings.get('lyrics_providers') or []
     if not selected or selected[0] == 'auto':
-        return ['lrclib', 'netease', 'amll', 'musixmatch']
+        return ['netease', 'musixmatch', 'lrclib', 'amll']
 
     return [p for p in selected if isinstance(p, str) and p]
 
@@ -216,25 +217,29 @@ async def search_lyrics_endpoint(  # noqa: PLR0913
             if not safe_path.is_relative_to(DOWNLOAD_DIR.resolve()):
                 raise HTTPException(403, 'Access Denied')
 
-        # TẦNG 1: Tìm sidecar <file>.lrc local
+        # TẦNG 1: Tìm sidecar <file>.ttml hoặc <file>.lrc local
         if safe_path:
+            ttml_path = safe_path.with_suffix('.ttml')
             lrc_path = safe_path.with_suffix('.lrc')
-            if lrc_path.exists():
+            parsed = None
+            if ttml_path.exists():
+                text = ttml_path.read_text(encoding='utf-8')
+                parsed = lyrics.parse_amll_ttml(text)
+            elif lrc_path.exists():
                 text = lrc_path.read_text(encoding='utf-8')
                 parsed = lyrics.parse_enhanced_lrc(text)
-                if parsed:
-                    ast = lyrics.NormalizedLyrics(
-                        track_id=track_id,
-                        isrc=None,
-                        provider_name='local',
-                        sync_level='word'
-                        if any(line.lead for line in parsed)
-                        else 'line',
-                        lines=parsed,
-                    )
-                    ast.granularity = ast.sync_level
-                    fut.set_result(ast)
-                    return ast
+                
+            if parsed:
+                ast = lyrics.NormalizedLyrics(
+                    track_id=track_id,
+                    isrc=None,
+                    provider_name='local',
+                    sync_level='word' if any(line.lead for line in parsed) else 'line',
+                    lines=parsed,
+                )
+                ast.granularity = ast.sync_level
+                fut.set_result(ast)
+                return ast
 
         # TẦNG 2: Tìm lời nhúng sẵn trong ID3 của chính file audio đó
         if safe_path and safe_path.exists():
@@ -281,7 +286,10 @@ async def search_lyrics_endpoint(  # noqa: PLR0913
 
         # TẦNG 4: Ghi sidecar ngầm
         if lyrics_ast and safe_path:
-            lyrics.save_sidecar_lrc(safe_path, lyrics_ast.to_sidecar_lrc())
+            if lyrics_ast.sync_level in {'word', 'syllable'}:
+                lyrics.save_sidecar_ttml(safe_path, lyrics_ast.to_ttml())
+            else:
+                lyrics.save_sidecar_lrc(safe_path, lyrics_ast.to_sidecar_lrc())
 
         fut.set_result(lyrics_ast)
         return lyrics_ast
@@ -394,8 +402,15 @@ def _song_for_download(url: str) -> dict[str, Any]:
     raise HTTPException(status_code=400, detail='Unsupported URL')
 
 
+import uuid
+
 def _register_job(song: dict[str, Any], status: str = 'queued') -> str:
-    song_id = str(song.get('song_id') or song.get('url') or id(song))
+    base_id = str(song.get('id') or song.get('song_id') or song.get('url') or id(song))
+    song_id = base_id
+    # Ensure unique job ID in case the same song is queued multiple times
+    while song_id in state.download_jobs:
+        song_id = f"{base_id}_{uuid.uuid4().hex[:8]}"
+        
     state.download_jobs[song_id] = {
         'song': song,
         'status': status,
@@ -555,17 +570,21 @@ async def _process_batch(
                 'Failed to resolve playlist name for {}', playlist_url
             )
 
-    async def _bounded(song: dict[str, Any], song_id: str) -> dict[str, Any]:
-        try:
-            filename = await _run_download(
-                song, song_id, subdir=playlist_subdir
-            )
-        except Exception:
-            filename = None
-        return {'song': song, 'filename': filename}
+    async def _bounded(song: dict[str, Any], song_id: str, sem: asyncio.Semaphore) -> dict[str, Any]:
+        async with sem:
+            try:
+                filename = await _run_download(
+                    song, song_id, subdir=playlist_subdir
+                )
+            except Exception:
+                filename = None
+            return {'song': song, 'filename': filename}
+
+    max_downloads = int(os.getenv('MAX_CONCURRENT_DOWNLOADS', 3))
+    sem = asyncio.Semaphore(max_downloads)
 
     results = await asyncio.gather(
-        *[_bounded(s, sid) for s, sid in zip(songs, job_ids)],
+        *[_bounded(s, sid, sem) for s, sid in zip(songs, job_ids)],
         return_exceptions=False,
     )
 

@@ -85,6 +85,54 @@ class NormalizedLyrics:
                 out.append(f'{prefix}{line.raw_text}')
         return '\n'.join(out)
 
+    def to_ttml(self) -> str:
+        """Render to TTML format (XML) for Karaoke-style sync."""
+        def format_time(seconds: float) -> str:
+            hours = int(seconds // 3600)
+            minutes = int((seconds % 3600) // 60)
+            secs = seconds % 60
+            return f'{hours:02d}:{minutes:02d}:{secs:06.3f}'
+            
+        out = []
+        out.append('<?xml version="1.0" encoding="utf-8"?>')
+        out.append('<tt xmlns="http://www.w3.org/ns/ttml">')
+        out.append('  <body>')
+        
+        if self.lines:
+            overall_begin = format_time(self.lines[0].start_time)
+            overall_end = format_time(self.lines[-1].end_time)
+        else:
+            overall_begin = "00:00:00.000"
+            overall_end = "00:00:00.000"
+            
+        out.append(f'    <div begin="{overall_begin}" end="{overall_end}">')
+        
+        for line in self.lines:
+            if line.is_instrumental:
+                continue
+            line_begin = format_time(line.start_time)
+            line_end = format_time(line.end_time)
+            out.append(f'      <p begin="{line_begin}" end="{line_end}">')
+            
+            if self.sync_level in {'word', 'syllable'} and line.lead:
+                for token in line.lead:
+                    t_begin = format_time(token.start_time)
+                    t_end = format_time(token.end_time)
+                    text = token.text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                    if token.is_trailing_space:
+                        text += ' '
+                    out.append(f'        <span begin="{t_begin}" end="{t_end}">{text}</span>')
+            else:
+                text = line.raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                out.append(f'        <span begin="{line_begin}" end="{line_end}">{text}</span>')
+                
+            out.append('      </p>')
+            
+        out.append('    </div>')
+        out.append('  </body>')
+        out.append('</tt>')
+        return '\n'.join(out)
+
     def to_audio_tag_text(self) -> str:
         """Render to standard line-level or plain text for ID3 USLT tags.
         Strips all word-level `<mm:ss.xx>` timestamps to comply with ID3 standard.
@@ -337,6 +385,17 @@ def save_sidecar_lrc(audio_path: Path, lrc_text: str) -> None:
     lrc_path = audio_path.with_suffix('.lrc')
     try:
         lrc_path.write_text(lrc_text, encoding='utf-8')
+    except Exception:
+        pass
+
+
+def save_sidecar_ttml(audio_path: Path, ttml_text: str) -> None:
+    """Safe helper to write sidecar without failing playback."""
+    if not ttml_text:
+        return
+    ttml_path = audio_path.with_suffix('.ttml')
+    try:
+        ttml_path.write_text(ttml_text, encoding='utf-8')
     except Exception:
         pass
 

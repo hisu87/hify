@@ -304,3 +304,5 @@ data/settings.json
 
 .claude/
 frontend/dist/
+data/*
+.env.example

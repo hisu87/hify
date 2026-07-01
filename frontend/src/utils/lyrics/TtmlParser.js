@@ -31,11 +31,14 @@ function parseWordJson(linesArray) {
 
   for (const line of linesArray) {
     const parsedLine = {
-      text: line.text || '',
-      start: line.start_time || line.start || 0,
-      end: line.end_time || line.end || 0,
+      rawText: line.text || line.raw_text || '',
+      startTime: line.start_time || line.start || 0,
+      endTime: line.end_time || line.end || 0,
       words: [],
-      isInstrumental: line.is_instrumental || false
+      lead: [],
+      background: [],
+      isInstrumental: line.is_instrumental || false,
+      agent_id: line.agent_id
     }
 
     // `lead` or `words` is the array of word-sync items
@@ -43,20 +46,39 @@ function parseWordJson(linesArray) {
     if (wordList.length > 0) {
       hasWordSync = true
       for (const w of wordList) {
-        parsedLine.words.push({
+        const token = {
           text: w.text || '',
-          start: w.start_time || w.start || parsedLine.start,
-          end: w.end_time || w.end || parsedLine.end
-        })
+          startTime: w.start_time || w.start || parsedLine.startTime,
+          endTime: w.end_time || w.end || parsedLine.endTime,
+          isTrailingSpace: w.is_trailing_space || w.isTrailingSpace || false
+        }
+        parsedLine.words.push(token)
+        parsedLine.lead.push(token)
       }
     } else {
       // Fallback: treat the whole line as one word to maintain structure
-      parsedLine.words.push({
-        text: parsedLine.text,
-        start: parsedLine.start,
-        end: parsedLine.end
-      })
+      const token = {
+        text: parsedLine.rawText,
+        startTime: parsedLine.startTime,
+        endTime: parsedLine.endTime,
+        isTrailingSpace: false
+      }
+      parsedLine.words.push(token)
+      parsedLine.lead.push(token)
     }
+
+    if (line.background) {
+      for (const w of line.background) {
+        const token = {
+          text: w.text || '',
+          startTime: w.start_time || w.start || parsedLine.startTime,
+          endTime: w.end_time || w.end || parsedLine.endTime,
+          isTrailingSpace: w.is_trailing_space || w.isTrailingSpace || false
+        }
+        parsedLine.background.push(token)
+      }
+    }
+
     resultLines.push(parsedLine)
   }
 
