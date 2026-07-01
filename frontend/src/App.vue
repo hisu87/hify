@@ -7,33 +7,39 @@
 
     <LyricsView :is-open="isLyricsOpen" @close="isLyricsOpen = false" />
     <div
-      class="flex min-h-dvh w-full overflow-hidden transition-[padding] duration-300"
+      class="flex flex-col min-h-dvh w-full overflow-hidden transition-[padding] duration-300"
       :class="
         route?.name === 'Player' || route?.name === 'Lyrics'
-          ? 'pb-[calc(64px_+_env(safe-area-inset-bottom))] lg:pb-0'
-          : 'pb-[calc(136px_+_env(safe-area-inset-bottom))] lg:pb-[96px]'
+          ? 'pb-[env(safe-area-inset-bottom)] lg:pb-0'
+          : 'pb-[calc(80px_+_env(safe-area-inset-bottom))] lg:pb-[96px]'
       "
     >
-      <Sidebar />
-      <main class="relative flex-1 min-w-0 transition-all duration-300">
-        <div
-          class="mx-auto flex w-full max-w-[1600px] flex-col px-4 pt-4 sm:px-6 lg:px-8 lg:pt-6"
-        >
-          <router-view v-slot="{ Component, route }">
-            <transition name="page" mode="out-in">
-              <keep-alive :include="['Player']">
-                <component :is="Component" :key="route.fullPath" />
-              </keep-alive>
-            </transition>
-          </router-view>
-        </div>
-      </main>
-      <NowPlayingSidebar />
+      <div class="flex flex-1 min-h-0 relative">
+        <Sidebar />
+        <main class="relative flex-1 min-w-0 transition-all duration-300 overflow-y-auto">
+          <div
+            class="mx-auto flex w-full max-w-[1600px] flex-col px-4 pt-4 sm:px-6 lg:px-8 lg:pt-6 h-full"
+          >
+            <router-view v-slot="{ Component, route }">
+              <transition name="page" mode="out-in">
+                <keep-alive :include="['Player']">
+                  <component :is="Component" :key="route.fullPath" />
+                </keep-alive>
+              </transition>
+            </router-view>
+          </div>
+        </main>
+        <NowPlayingSidebar />
+      </div>
+      
+      <!-- Fixed PlayerBar at the bottom -->
+      <div class="fixed bottom-0 left-0 w-full z-50">
+        <PlayerBar
+          :is-lyrics-open="isLyricsOpen"
+          @open-lyrics="isLyricsOpen = !isLyricsOpen"
+        />
+      </div>
     </div>
-    <PlayerBar
-      :is-lyrics-open="isLyricsOpen"
-      @open-lyrics="isLyricsOpen = !isLyricsOpen"
-    />
     <MobileNav />
     <Settings />
     <QueueDrawer />

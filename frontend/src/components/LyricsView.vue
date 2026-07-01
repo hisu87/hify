@@ -86,7 +86,7 @@
 
             <!-- Instrument / empty line -->
             <span
-              v-if="item.line.isInstrumental || !item.line.lead.length"
+              v-if="item.line.isInstrumental || (!item.line.words?.length && syncType === 'word')"
               class="lyric-instrument"
             >
               {{ item.line.isInstrumental ? '• • •' : '♪' }}
@@ -96,7 +96,7 @@
             <div
               v-if="
                 syncType === 'line' ||
-                (!item.line.lead?.length && !item.line.isInstrumental)
+                (!item.line.words?.length && !item.line.isInstrumental)
               "
               class="lead-line-text flex flex-wrap"
               :class="[
@@ -112,15 +112,14 @@
 
             <!-- Lead Words -->
             <div
-              v-else-if="item.line.lead?.length"
+              v-else-if="item.line.words?.length"
               class="lead-words flex flex-wrap"
               :class="getAlignClass(item.index)"
             >
               <span
-                v-for="(word, wi) in item.line.lead"
+                v-for="(word, wi) in item.line.words"
                 :key="'lead-' + wi"
                 class="lyric-word"
-                :data-has-space="word.isTrailingSpace"
                 :data-text="word.text"
                 :ref="(el) => registerWordEl(item.index, wi, el, false)"
               >
@@ -161,6 +160,7 @@ import { Icon } from '@iconify/vue'
 import { usePlayer } from '../model/player'
 import api from '../model/api'
 import { LyricsAnimator } from '../utils/lyrics/LyricsAnimator.js'
+import { parseTtml } from '../utils/lyrics/TtmlParser.js'
 
 // ─── Props / Emits ────────────────────────────────────────────────────────────
 const props = defineProps({
@@ -542,25 +542,10 @@ function applyLyrics(ast) {
   }
   syncType.value = ast.sync_type || ast.syncType || ast.granularity || 'word'
 
-  // Map snake_case from backend API to camelCase for frontend Animator
-  const mappedLines = lines.map((line) => ({
-    startTime: line.start_time ?? line.startTime,
-    endTime: line.end_time ?? line.endTime,
-    rawText: line.raw_text ?? line.rawText,
-    isInstrumental: line.is_instrumental ?? line.isInstrumental,
-    lead: (line.lead || []).map((t) => ({
-      text: t.text,
-      startTime: t.start_time ?? t.startTime,
-      endTime: t.end_time ?? t.endTime,
-      isTrailingSpace: t.is_trailing_space ?? t.isTrailingSpace,
-    })),
-    background: (line.background || []).map((t) => ({
-      text: t.text,
-      startTime: t.start_time ?? t.startTime,
-      endTime: t.end_time ?? t.endTime,
-      isTrailingSpace: t.is_trailing_space ?? t.isTrailingSpace,
-    })),
-  }))
+  // Use TtmlParser
+  const parsed = parseTtml(lines)
+  const mappedLines = parsed.lines
+  syncType.value = parsed.isWordSync ? 'word' : 'line'
 
   parsedLyrics.value = mappedLines
   error.value = ''

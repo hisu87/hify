@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col w-full relative pb-10">
+  <div class="min-h-screen flex flex-col w-full relative pb-28">
     <!-- Header -->
     <div
       class="px-4 py-8 sm:px-6 xl:px-12 shrink-0 flex items-center justify-between"

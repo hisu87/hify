@@ -33,8 +33,9 @@ from mutagen.oggvorbis import OggVorbis
 from uvicorn import Config, Server
 
 from hify import __version__, api
+from hify.database import DatabaseManager
 from hify.downloader import Downloader
-from hify.monitor import PlaylistMonitorDB, monitor_loop
+from hify.monitor import PlaylistMonitorDB, monitor_loop, sync_filesystem_to_db
 
 load_dotenv()
 
@@ -227,6 +228,11 @@ def build_app() -> FastAPI:
     api.state.settings = api._load_settings(settings_path)
 
     api.state.version = __version__
+
+    # Ensure covers directory exists and mount it
+    covers_dir = Path("data/covers")
+    covers_dir.mkdir(parents=True, exist_ok=True)
+    app.mount('/covers', StaticFiles(directory=str(covers_dir)), name='covers')
     api.state.downloader = Downloader(
         DOWNLOAD_DIR,
         audio_format=api.state.settings['format'],
@@ -266,8 +272,16 @@ def build_app() -> FastAPI:
         api.state.download_semaphore = asyncio.Semaphore(
             max(1, int(api.state.settings.get('max_parallel_downloads', 3)))
         )
-        db_path = DATABASE_DIR / 'hify_monitor.db'
+        # Unify both monitor and core tracking into hify.db
+        db_path = DATABASE_DIR / 'hify.db'
         api.state.monitor_db = PlaylistMonitorDB(db_path)
+
+        main_db_path = DATABASE_DIR / 'hify.db'
+        api.state.db = DatabaseManager(main_db_path)
+
+        # Run synchronous filesystem scanning in a thread
+        await asyncio.to_thread(sync_filesystem_to_db, DOWNLOAD_DIR, api.state.db)
+
         asyncio.create_task(
             monitor_loop(
                 db=api.state.monitor_db,
@@ -278,34 +292,15 @@ def build_app() -> FastAPI:
             )
         )
 
-    import time
     _list_cache = None
     _list_cache_time = 0
 
     @app.get('/list')
-    def list_downloads() -> list[str]:
-        nonlocal _list_cache, _list_cache_time
-        if _list_cache is not None and time.time() - _list_cache_time < 30:
-            return _list_cache
-
-        audio_exts = {'.mp3', '.m4a', '.flac', '.ogg', '.wav', '.aac', '.opus'}
-        base = DOWNLOAD_DIR.resolve()
-        if not base.exists():
-            return []
-        files: list[str] = []
-        # Walk recursively so per-playlist sub-folders show up alongside
-        # loose downloads in the library view.
-        for path in base.rglob('*'):
-            if not path.is_file():
-                continue
-            if path.suffix.lower() not in audio_exts:
-                continue
-            files.append(path.relative_to(base).as_posix())
-        files.sort()
-        
-        _list_cache = files
-        _list_cache_time = time.time()
-        return files
+    def list_downloads() -> list[dict]:
+        # Pure DB query, no FS fallback
+        if hasattr(api.state, 'db') and api.state.db:
+            return api.state.db.list_all_tracks()
+        return []
 
     @app.delete('/delete')
     def delete_download(file: str) -> dict:
@@ -362,27 +357,27 @@ def build_app() -> FastAPI:
         )
 
     import mimetypes
-    from fastapi import Request
+
     from fastapi.responses import StreamingResponse
 
     @app.get('/downloads/{file_path:path}')
     async def download_file(file_path: str, request: Request):
         if not _is_safe_path(file_path):
             return JSONResponse(status_code=400, content={'error': 'Invalid path'})
-        
+
         base = DOWNLOAD_DIR.resolve()
         try:
             full = (base / file_path).resolve()
             full.relative_to(base)
         except (ValueError, RuntimeError):
             return JSONResponse(status_code=400, content={'error': 'Invalid path'})
-            
+
         if not full.is_file():
             return JSONResponse(status_code=404, content={'error': 'File not found'})
-            
+
         file_size = full.stat().st_size
         range_header = request.headers.get('Range')
-        
+
         if not range_header:
             # Chunk size 1MB (1024 * 1024)
             def file_iterator():
@@ -395,22 +390,22 @@ def build_app() -> FastAPI:
                 media_type=media_type or 'application/octet-stream',
                 headers={'Accept-Ranges': 'bytes', 'Content-Length': str(file_size)}
             )
-            
+
         try:
             byte_range = range_header.replace('bytes=', '').split('-')
             start = int(byte_range[0])
             end = int(byte_range[1]) if byte_range[1] else file_size - 1
         except ValueError:
             return JSONResponse(status_code=416, content={'error': 'Invalid Range'})
-            
+
         if start >= file_size or end >= file_size or start > end:
             return JSONResponse(
                 status_code=416,
                 headers={'Content-Range': f'bytes */{file_size}'}
             )
-            
+
         chunk_size = end - start + 1
-        
+
         def ranged_file_iterator(start, chunk_size):
             with open(full, 'rb') as f:
                 f.seek(start)
@@ -423,7 +418,7 @@ def build_app() -> FastAPI:
                         break
                     remaining -= len(data)
                     yield data
-                    
+
         media_type, _ = mimetypes.guess_type(str(full))
         return StreamingResponse(
             ranged_file_iterator(start, chunk_size),

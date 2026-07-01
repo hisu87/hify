@@ -173,6 +173,10 @@ async function safeSeekAndPlay(deck, targetTime) {
 
 function _playTrack(track, isGoingBack = false) {
   abortActiveFadeJob()
+  if (fadeIntervalId) {
+    clearInterval(fadeIntervalId)
+    fadeIntervalId = null
+  }
 
   if (currentTrack.value && !isGoingBack) {
     history.value.push(currentTrack.value)
@@ -236,6 +240,7 @@ function play() {
 function pause() {
   if (activeFadeJob) {
     clearInterval(fadeIntervalId)
+    fadeIntervalId = null
     activeDeck.pause()
     standbyDeck.pause()
     isPlaying.value = false
@@ -478,6 +483,10 @@ function updateTime() {
       timeLeft <= triggerTime &&
       !activeFadeJob
     ) {
+      if (fadeIntervalId) {
+        clearInterval(fadeIntervalId)
+        fadeIntervalId = null
+      }
       startCrossfade(effectiveCrossfade)
     }
 
@@ -552,6 +561,7 @@ function runFadeInterval(stepTime) {
 
     if (activeFadeJob.currentStep >= activeFadeJob.steps) {
       clearInterval(fadeIntervalId)
+      fadeIntervalId = null
       completeHandoff()
     }
   }, stepTime)

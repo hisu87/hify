@@ -175,18 +175,21 @@ const player = usePlayer()
 const router = useRouter()
 
 const files = ref([])
-const virtualFiles = computed(() => files.value.map(f => ({ id: f, file: f })))
+const virtualFiles = computed(() => files.value.map((f, i) => ({ id: typeof f === 'object' ? f.id || i : f, file: f })))
 const loading = ref(false)
 const error = ref('')
 const deleting = ref({})
 const coverFailed = ref({})
 
 function coverUrlFor(file) {
-  return API.coverFileURL(file)
+  if (typeof file === 'object' && file.cover_url) return file.cover_url
+  const name = typeof file === 'string' ? file : file.file || ''
+  return API.coverFileURL(name)
 }
 
 function markCoverFailed(file) {
-  coverFailed.value = { ...coverFailed.value, [file]: true }
+  const name = typeof file === 'string' ? file : file.file || ''
+  coverFailed.value = { ...coverFailed.value, [name]: true }
 }
 
 async function refresh() {
@@ -203,31 +206,36 @@ async function refresh() {
 }
 
 async function onDelete(file) {
-  if (!confirm(t('library.deletePrompt', { file }))) return
-  deleting.value = { ...deleting.value, [file]: true }
+  const name = typeof file === 'string' ? file : file.file
+  if (!confirm(t('library.deletePrompt', { file: name }))) return
+  deleting.value = { ...deleting.value, [name]: true }
   try {
-    await API.deleteDownload(file)
-    files.value = files.value.filter((f) => f !== file)
+    await API.deleteDownload(name)
+    files.value = files.value.filter((f) => (typeof f === 'string' ? f : f.file) !== name)
   } catch {
-    error.value = t('library.failedDelete', { file })
+    error.value = t('library.failedDelete', { file: name })
   } finally {
-    deleting.value = { ...deleting.value, [file]: false }
+    deleting.value = { ...deleting.value, [name]: false }
   }
 }
 
 function formatExt(file) {
-  const dot = file.lastIndexOf('.')
-  return dot > 0 ? file.slice(dot + 1).toUpperCase() : ''
+  const name = typeof file === 'string' ? file : file.file || ''
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(dot + 1).toUpperCase() : ''
 }
 
 function displayName(file) {
-  const slash = file.lastIndexOf('/')
-  return slash >= 0 ? file.slice(slash + 1) : file
+  if (typeof file === 'object' && file.title) return file.title
+  const name = typeof file === 'string' ? file : file.file || ''
+  const slash = name.lastIndexOf('/')
+  return slash >= 0 ? name.slice(slash + 1) : name
 }
 
 function folderOf(file) {
-  const slash = file.lastIndexOf('/')
-  return slash >= 0 ? file.slice(0, slash) : ''
+  const name = typeof file === 'string' ? file : file.file || ''
+  const slash = name.lastIndexOf('/')
+  return slash >= 0 ? name.slice(0, slash) : ''
 }
 
 function playFile(index) {

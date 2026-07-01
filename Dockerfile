@@ -19,12 +19,12 @@ RUN pip install --upgrade pip && \
 FROM python:3.13-alpine
 
 LABEL maintainer="hisu87"
-LABEL version="3.2.1-stable"
+LABEL version="3.3.0-stable"
 LABEL description="Self-hosted Spotify downloader"
 
 LABEL org.opencontainers.image.title="Hify" \
       org.opencontainers.image.description="Download your Spotify playlists and songs along with album art and metadata in a self-hosted way via Docker" \
-      org.opencontainers.image.version="3.2.1-stable" \
+      org.opencontainers.image.version="3.3.0-stable" \
       org.opencontainers.image.authors="Henrique Sebastião <contato@henriquesebastiao.com>" \
       org.opencontainers.image.url="https://github.com/hisu87/hify" \
       org.opencontainers.image.source="https://github.com/hisu87/hify" \

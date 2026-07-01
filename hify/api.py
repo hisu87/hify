@@ -470,6 +470,17 @@ async def _run_download(
     job['status'] = 'done'
     job['filename'] = filename
     job['progress'] = 100
+
+    # Save to unified relational DB
+    if hasattr(state, 'db') and state.db:
+        try:
+            # Add file_path since the downloader doesn't inject it directly to `song` dict
+            song_data = dict(song)
+            song_data['file_path'] = filename
+            state.db.save_track_metadata(song_id, song_data)
+        except Exception as e:
+            logger.error(f"Failed to save metadata to DB: {e}")
+
     await state.connections.broadcast({
         'song': song,
         'progress': 100,
