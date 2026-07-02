@@ -279,32 +279,32 @@
           v-show="activeTab === 'queue'"
           class="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 relative z-10 custom-scrollbar"
         >
-          <ul v-if="player.playlist.value.length > 0" class="space-y-2">
+          <ul v-if="paginatedQueue.length > 0" class="space-y-2">
             <li
-              v-for="(track, idx) in player.playlist.value"
-              :key="track.file + idx"
+              v-for="item in paginatedQueue"
+              :key="item.track.file + item.idx"
               class="rounded-2xl px-4 py-3 flex items-center gap-4 cursor-pointer transition-all duration-200"
               :class="
-                idx === player.currentIndex.value
+                item.idx === player.currentIndex.value
                   ? 'bg-white/20 shadow-lg ring-1 ring-white/30'
                   : 'hover:bg-white/10'
               "
-              @click="onPick(idx)"
+              @click="onPick(item.idx)"
             >
               <div
                 class="relative h-14 w-14 shrink-0 rounded-xl overflow-hidden flex items-center justify-center bg-black/40 shadow-inner"
               >
                 <img
-                  v-if="!coverFailed[track.file]"
-                  :src="track.cover"
-                  :alt="track.title"
+                  v-if="!coverFailed[item.track.file]"
+                  :src="item.track.cover"
+                  :alt="item.track.title"
                   class="absolute inset-0 h-full w-full object-cover"
                   loading="lazy"
                   @error="markCoverFailed(track.file)"
                 />
                 <span
                   v-if="
-                    idx === player.currentIndex.value && player.isPlaying.value
+                    item.idx === player.currentIndex.value && player.isPlaying.value
                   "
                   class="relative equalizer h-5"
                   aria-hidden="true"
@@ -312,24 +312,52 @@
                   <span></span><span></span><span></span>
                 </span>
                 <Icon
-                  v-else-if="coverFailed[track.file]"
+                  v-else-if="coverFailed[item.track.file]"
                   icon="clarity:music-note-line"
                   class="h-6 w-6 text-white/50"
                 />
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-lg truncate font-bold text-white drop-shadow-md">
-                  {{ track.title }}
-                </p>
                 <p
-                  class="text-sm truncate text-white/60 font-medium drop-shadow-sm mt-0.5"
+                  class="text-base font-bold text-white truncate drop-shadow-sm"
                 >
-                  {{ track.artist || t('common.unknownArtist') }}
+                  {{ item.track.title }}
                 </p>
+                <p class="text-sm font-medium text-white/50 truncate">
+                  {{ item.track.artist || t('common.unknownArtist') }}
+                </p>
+              </div>
+              <div class="text-xs text-white/40 font-mono shrink-0 pl-2">
+                {{ formatTime(item.track.duration_ms / 1000) }}
               </div>
             </li>
           </ul>
-          <div v-else class="text-center py-24">
+          
+          <!-- Pagination Controls -->
+          <div
+            v-if="totalQueuePages > 1"
+            class="mt-6 mb-2 flex items-center justify-center gap-4"
+          >
+            <button
+              class="icon-btn hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
+              @click="prevQueuePage"
+              :disabled="queuePage <= 1"
+            >
+              <Icon icon="clarity:angle-left-line" class="h-5 w-5" />
+            </button>
+            <span class="text-sm font-bold text-white/60">
+              {{ queuePage }} / {{ totalQueuePages }}
+            </span>
+            <button
+              class="icon-btn hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
+              @click="nextQueuePage"
+              :disabled="queuePage >= totalQueuePages"
+            >
+              <Icon icon="clarity:angle-right-line" class="h-5 w-5" />
+            </button>
+          </div>
+
+          <div v-else-if="paginatedQueue.length === 0" class="text-center py-24">
             <p class="text-white/50 text-xl font-semibold">
               {{ t('player.empty') }}
             </p>
@@ -456,6 +484,34 @@ onUnmounted(() => {
 const openFullscreenLyrics = () => {
   router.push('/lyrics')
 }
+
+// Pagination logic
+const queuePage = ref(1)
+const queuePageSize = 8
+
+const paginatedQueue = computed(() => {
+  const start = (queuePage.value - 1) * queuePageSize
+  const end = start + queuePageSize
+  return player.playlist.value
+    .map((track, idx) => ({ track, idx }))
+    .slice(start, end)
+})
+
+const totalQueuePages = computed(() => Math.max(1, Math.ceil(player.playlist.value.length / queuePageSize)))
+
+function prevQueuePage() {
+  if (queuePage.value > 1) queuePage.value--
+}
+
+function nextQueuePage() {
+  if (queuePage.value < totalQueuePages.value) queuePage.value++
+}
+
+watch(() => player.currentIndex.value, (newIdx) => {
+  if (newIdx >= 0 && player.playlist.value.length > 0) {
+    queuePage.value = Math.floor(newIdx / queuePageSize) + 1
+  }
+})
 </script>
 
 <style scoped>

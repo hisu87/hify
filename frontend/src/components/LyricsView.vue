@@ -308,7 +308,10 @@ const lyricsRequests = new Map()
 
 // ─── Animator ─────────────────────────────────────────────────────────────────
 const animator = new LyricsAnimator()
-animator.getCurrentTime = () => player.currentTime.value
+animator.getCurrentTime = () => {
+  const audio = player.getAudio()
+  return audio && audio.currentTime !== undefined ? audio.currentTime : player.currentTime.value
+}
 animator.isPlaying = () => player.isPlaying.value
 
 // Line element refs
