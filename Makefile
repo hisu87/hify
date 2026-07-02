@@ -1,6 +1,6 @@
 #!make
 
-HIFY_VERSION := 3.3.0-stable
+HIFY_VERSION := 3.3.1-release
 TARGET := hisu87/hify
 
 all: build latest

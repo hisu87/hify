@@ -101,51 +101,59 @@
                 syncType === 'line' ||
                 (!item.line.words?.length && !item.line.isInstrumental)
               "
-              class="lead-line-text flex flex-wrap"
-              :class="[
-                getAlignClass(item.index),
-                {
-                  'is-active': item.index === activeLineIdx,
-                  'is-past': item.index < activeLineIdx,
-                },
-              ]"
+              class="w-full flex"
+              :class="getAlignClass(item.index)"
             >
-              {{ item.line.rawText }}
+              <div
+                class="lead-line-text inline-flex flex-wrap text-left"
+                :class="[
+                  {
+                    'is-active': item.index === activeLineIdx,
+                    'is-past': item.index < activeLineIdx,
+                  },
+                ]"
+              >
+                {{ item.line.rawText }}
+              </div>
             </div>
 
             <!-- Lead Words -->
             <div
               v-else-if="item.line.words?.length"
-              class="lead-words flex flex-wrap"
+              class="w-full flex"
               :class="getAlignClass(item.index)"
             >
-              <span
-                v-for="(word, wi) in item.line.words"
-                :key="'lead-' + wi"
-                class="lyric-word"
-                :data-text="word.text"
-                :ref="(el) => registerWordEl(item.index, wi, el, false)"
-              >
-                {{ word.text }}
-              </span>
+              <div class="lead-words inline-flex flex-wrap text-left">
+                <span
+                  v-for="(word, wi) in item.line.words"
+                  :key="'lead-' + wi"
+                  class="lyric-word"
+                  :data-text="word.text"
+                  :ref="(el) => registerWordEl(item.index, wi, el, false)"
+                >
+                  {{ word.text }}
+                </span>
+              </div>
             </div>
 
             <!-- Background Words -->
             <div
               v-if="item.line.background"
-              class="bg-words flex flex-wrap scale-75 opacity-70 mt-1"
+              class="w-full flex scale-75 opacity-70 mt-1"
               :class="getAlignClass(item.index)"
             >
-              <span
-                v-for="(word, wi) in item.line.background"
-                :key="'bg-' + wi"
-                class="lyric-word"
-                :data-has-space="word.isTrailingSpace"
-                :data-text="word.text"
-                :ref="(el) => registerWordEl(item.index, wi, el, true)"
-              >
-                {{ word.text }}
-              </span>
+              <div class="bg-words inline-flex flex-wrap text-left">
+                <span
+                  v-for="(word, wi) in item.line.background"
+                  :key="'bg-' + wi"
+                  class="lyric-word"
+                  :data-has-space="word.isTrailingSpace"
+                  :data-text="word.text"
+                  :ref="(el) => registerWordEl(item.index, wi, el, true)"
+                >
+                  {{ word.text }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -158,7 +166,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { usePlayer } from '../model/player'
 import api from '../model/api'
@@ -300,7 +308,7 @@ const lyricsRequests = new Map()
 
 // ─── Animator ─────────────────────────────────────────────────────────────────
 const animator = new LyricsAnimator()
-animator.audioElement = player.getAudio()
+animator.getCurrentTime = () => player.currentTime.value
 animator.isPlaying = () => player.isPlaying.value
 
 // Line element refs
@@ -393,11 +401,10 @@ watch(
   isActive,
   async (active) => {
     if (active) {
-      // Always re-assign the correct audio deck element when panel opens
-      animator.audioElement = player.getAudio()
       await fetchLyrics()
       // Wait for Vue to render the lyric lines (v-for) before starting the loop
       await nextTick()
+      remeasureLines()
       animator.start()
     } else {
       animator.stop()
@@ -409,7 +416,6 @@ watch(
 watch(
   () => currentTrack.value?.title,
   (newTitle) => {
-    animator.audioElement = player.getAudio()
     if (newTitle) prefetchLyrics()
     if (isActive.value) {
       parsedLyrics.value = []
@@ -560,6 +566,7 @@ function applyLyrics(ast) {
   animator.setLines(mappedLines)
 
   nextTick(() => {
+    remeasureLines()
     const now = player.currentTime.value
     let startIdx = 0
     for (let i = mappedLines.length - 1; i >= 0; i--) {
@@ -579,6 +586,46 @@ function applyLyrics(ast) {
     activeLineIdx.value = startIdx
   })
 }
+
+function remeasureLines() {
+  if (!scrollerEl.value) return
+  let anyChanged = false
+  for (const [li, el] of lineElMap.entries()) {
+    const h = el.offsetHeight
+    if (h > 0 && measuredHeights.get(li) !== h) {
+      measuredHeights.set(li, h)
+      anyChanged = true
+    }
+  }
+  return anyChanged
+}
+
+let resizeObserver = null
+onMounted(() => {
+  if (scrollerEl.value) {
+    resizeObserver = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        if (entry.contentRect.height > 0) {
+          const changed = remeasureLines()
+          if (changed && activeLineIdx.value >= 0) {
+            nextTick(() => {
+              if (activeLineIdx.value >= 0) {
+                const snap = getScrollSnap(activeLineIdx.value)
+                animator._scrollSpring.snapTo(snap)
+                scrollY.value = snap
+              }
+            })
+          }
+        }
+      }
+    })
+    resizeObserver.observe(scrollerEl.value)
+  }
+})
+
+onUnmounted(() => {
+  if (resizeObserver) resizeObserver.disconnect()
+})
 </script>
 
 <style scoped>
@@ -788,40 +835,7 @@ function applyLyrics(ast) {
 
 /* 3. THẦN CHÚ KHẮC PHỤC GLOW HÌNH CHỮ NHẬT VÀ THÊM PARTICLES (RELATIVE `em` SCALE) */
 .lyric-word::before {
-  content: '';
-  position: absolute;
-  inset: -1.2em -0.6em; /* Phủ rộng hơn chữ theo tỷ lệ font-size */
-  pointer-events: none;
-  z-index: 10;
-
-  /* Tạo ra các đốm sáng (particles) kích thước tính theo em để scale chuẩn trên màn High-DPI/Retina */
-  background:
-    radial-gradient(
-      circle at calc(var(--fill-pct, 0%) * 1.2) 20%,
-      rgba(255, 255, 255, 1) 0%,
-      transparent 0.15em
-    ),
-    radial-gradient(
-      circle at calc(var(--fill-pct, 0%) * 1.2 - 5%) 85%,
-      rgba(255, 255, 255, 0.9) 0%,
-      transparent 0.25em
-    ),
-    radial-gradient(
-      circle at calc(var(--fill-pct, 0%) * 1.2 - 10%) 50%,
-      var(--dynamic-primary, rgba(255, 255, 255, 0.8)) 0%,
-      transparent 0.7em
-    ),
-    radial-gradient(
-      circle at calc(var(--fill-pct, 0%) * 1.2 + 5%) 60%,
-      rgba(255, 255, 255, 1) 0%,
-      transparent 0.1em
-    );
-
-  filter: blur(0.02em) drop-shadow(0 0 0.3em rgba(255, 255, 255, 1));
-  mix-blend-mode: color-dodge;
-
-  opacity: var(--glow-opacity, 0);
-  will-change: opacity;
+  /* Removed word-level particle glow to replace with line-level particle */
 }
 
 .lyric-word::after {
@@ -840,22 +854,61 @@ function applyLyrics(ast) {
     0 0 calc(var(--glow-scale, 0) * 1.8em)
       var(--dynamic-primary, rgba(255, 255, 255, 0.5));
 
-  /* Quét Karaoke mượt, đảm bảo đen 100% khi fill=120% */
+  /* Quét Karaoke mượt, mềm mại hơn */
   -webkit-mask-image: linear-gradient(
     90deg,
-    #000 calc(var(--fill-pct, 0%) * 1.2 - 20%),
-    transparent calc(var(--fill-pct, 0%) * 1.2)
+    #000 calc(var(--fill-pct, 0%) * 1.2 - 30%),
+    transparent calc(var(--fill-pct, 0%) * 1.2 + 10%)
   );
   mask-image: linear-gradient(
     90deg,
-    #000 calc(var(--fill-pct, 0%) * 1.2 - 20%),
-    transparent calc(var(--fill-pct, 0%) * 1.2)
+    #000 calc(var(--fill-pct, 0%) * 1.2 - 30%),
+    transparent calc(var(--fill-pct, 0%) * 1.2 + 10%)
   );
 
   opacity: var(--hl-opacity, 0);
   will-change:
     opacity,
     -webkit-mask-image;
+}
+
+/* Vệt sáng ngang (particle) đi theo line thay vì từng chữ */
+.lead-words {
+  position: relative;
+  width: 100%;
+}
+
+.lead-words::before {
+  content: '';
+  position: absolute;
+  top: -0.5em;
+  bottom: -0.5em;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  z-index: 10;
+
+  background:
+    radial-gradient(
+      ellipse 60px 100% at var(--line-progress, 0%) 50%,
+      rgba(255, 255, 255, 1) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 150px 100% at var(--line-progress, 0%) 50%,
+      var(--dynamic-primary, rgba(255, 255, 255, 0.6)) 0%,
+      transparent 70%
+    );
+
+  mix-blend-mode: color-dodge;
+  filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  will-change: opacity, background;
+}
+
+.lyric-line.is-active .lead-words::before {
+  opacity: 1;
 }
 
 .lyrics-state {

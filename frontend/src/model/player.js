@@ -310,17 +310,25 @@ function nextIndex() {
   if (playlist.value.length === 0) return -1
 
   if (isAutomix.value && currentTrack.value) {
+    const recentUrls = history.value.slice(-15).map((t) => t.url)
     const candidates = playlist.value
       .map((t, idx) => ({ t, idx }))
       .filter(
         (x) =>
           x.idx !== currentIndex.value &&
+          !recentUrls.includes(x.t.url) &&
           ((x.t.artist && x.t.artist === currentTrack.value.artist) ||
             (x.t.genre && x.t.genre === currentTrack.value.genre))
       )
     if (candidates.length > 0) {
-      const pick = candidates[Math.floor(Math.random() * candidates.length)]
-      return pick.idx
+      // Pick based on a seeded hash of the current track ID to keep it stable
+      // while displayQueue frequently re-evaluates
+      let seed = 0
+      const cid = currentTrack.value.id || currentTrack.value.url || 'seed'
+      for (let i = 0; i < cid.length; i++) {
+        seed = (seed * 31 + cid.charCodeAt(i)) % candidates.length
+      }
+      return candidates[seed].idx
     }
   }
 
@@ -560,15 +568,26 @@ function startCrossfade(durationSec) {
     trackToPlay = playlist.value[nIdx]
   }
 
-  nextTrackObjForFade = trackToPlay
-  standbyDeck.src = trackToPlay.url
-  standbyDeck.volume = 0
+  // Swap decks AT THE START of the crossfade
+  const temp = activeDeck
+  activeDeck = standbyDeck
+  standbyDeck = temp
+
+  if (currentTrack.value) {
+    history.value.push(currentTrack.value)
+  }
+
+  currentTrack.value = trackToPlay
+  duration.value = 0 // Will be updated by loadedmetadata of the new activeDeck
+
+  activeDeck.src = trackToPlay.url
+  activeDeck.volume = 0
 
   if (useAutomixOffset) {
-    safeSeekAndPlay(standbyDeck, 2.5)
+    safeSeekAndPlay(activeDeck, 2.5)
   } else {
-    standbyDeck.currentTime = 0
-    standbyDeck.play().catch(() => {})
+    activeDeck.currentTime = 0
+    activeDeck.play().catch(() => {})
   }
 
   const steps = 50
@@ -582,6 +601,7 @@ function startCrossfade(durationSec) {
     durationSec,
   }
 
+  updateMediaSession()
   runFadeInterval(stepTime)
 }
 
@@ -593,14 +613,14 @@ function runFadeInterval(stepTime) {
     const t = activeFadeJob.currentStep / activeFadeJob.steps
 
     // Logarithmic (quadratic) curve for natural human hearing perception
-    const volA = Math.max(0, activeFadeJob.targetVol * Math.pow(1 - t, 2))
-    const volB = Math.min(
+    const volOut = Math.max(0, activeFadeJob.targetVol * Math.pow(1 - t, 2))
+    const volIn = Math.min(
       activeFadeJob.targetVol,
       activeFadeJob.targetVol * Math.pow(t, 2)
     )
 
-    activeDeck.volume = volA
-    standbyDeck.volume = volB
+    standbyDeck.volume = volOut // old track fades out
+    activeDeck.volume = volIn // new track fades in
 
     if (activeFadeJob.currentStep >= activeFadeJob.steps) {
       clearInterval(fadeIntervalId)
@@ -611,22 +631,12 @@ function runFadeInterval(stepTime) {
 }
 
 function completeHandoff() {
-  activeDeck.pause()
+  standbyDeck.pause()
+  standbyDeck.currentTime = 0
   activeDeck.volume = isMuted.value ? 0 : volume.value
 
-  const temp = activeDeck
-  activeDeck = standbyDeck
-  standbyDeck = temp
-
-  if (currentTrack.value) {
-    history.value.push(currentTrack.value)
-  }
-
-  currentTrack.value = nextTrackObjForFade
   duration.value = isFinite(activeDeck.duration) ? activeDeck.duration : 0
   activeFadeJob = null
-
-  updateMediaSession()
 }
 
 const progressPct = computed(() =>

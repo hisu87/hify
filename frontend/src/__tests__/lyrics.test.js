@@ -57,11 +57,7 @@ describe('Lyrics Parser and Animator', () => {
     global.window = { devicePixelRatio: 2 }
 
     let mockTime = 5.0
-    animator.audioElement = {
-      get currentTime() {
-        return mockTime
-      },
-    }
+    animator.getCurrentTime = () => mockTime
     animator.isPlaying = () => true
 
     // Frame 1: initial sync
@@ -87,11 +83,7 @@ describe('Lyrics Parser and Animator', () => {
     global.window = { devicePixelRatio: 2 }
 
     let mockTime = 5.0
-    animator.audioElement = {
-      get currentTime() {
-        return mockTime
-      },
-    }
+    animator.getCurrentTime = () => mockTime
     animator.isPlaying = () => true
 
     // Frame 1

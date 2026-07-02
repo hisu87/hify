@@ -1,6 +1,6 @@
 {
   "name": "hify",
-  "version": "3.3.0-stable",
+  "version": "3.3.1-release",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -35,7 +35,7 @@ export class LyricsAnimator {
     // Scroll spring with Critical Damping (Giai đoạn 4.2)
     this._scrollSpring = new Spring(2.2, 1.0, 0)
 
-    this.audioElement = null
+    this.getCurrentTime = null
     this.isPlaying = () => false
 
     this._interpolatedTime = 0
@@ -101,7 +101,7 @@ export class LyricsAnimator {
     const dt = Math.min((ts - (this._lastTs || ts)) / 1000, 0.1)
     this._lastTs = ts
 
-    const rawTime = this.audioElement ? this.audioElement.currentTime : 0
+    const rawTime = this.getCurrentTime ? this.getCurrentTime() : 0
     const isPlaying = this.isPlaying ? this.isPlaying() : false
 
     const isSeek =
@@ -171,6 +171,38 @@ export class LyricsAnimator {
       const line = lines[li]
       const isActiveLine = li === cursor
       const isSungLine = li < cursor
+
+      // Calculate line-level progress for smooth gradient karaoke
+      let lineProgressPct = 0
+      if (isSungLine) {
+        lineProgressPct = 100
+      } else if (isActiveLine && line.lead && line.lead.length) {
+        let charsPassed = 0
+        let totalChars = 0
+        for (let wi = 0; wi < line.lead.length; wi++) {
+          const token = line.lead[wi]
+          totalChars += token.text.length
+          if (now >= token.endTime) {
+            charsPassed += token.text.length
+          } else if (now >= token.startTime) {
+            const activeTokenProgress =
+              (now - token.startTime) /
+              Math.max(token.endTime - token.startTime, 0.05)
+            charsPassed += token.text.length * activeTokenProgress
+          }
+        }
+        lineProgressPct = totalChars > 0 ? (charsPassed / totalChars) * 100 : 0
+      }
+
+      const lineEl = this._lineEls.get(li)
+      if (lineEl) {
+        setStyleIfChanged(
+          lineEl,
+          '--line-progress',
+          `${lineProgressPct.toFixed(2)}%`,
+          0.2
+        )
+      }
 
       // Process lead and background vocals
       this._processTokens(
