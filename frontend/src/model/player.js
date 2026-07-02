@@ -321,9 +321,8 @@ function nextIndex() {
             (x.t.genre && x.t.genre === currentTrack.value.genre))
       )
     if (candidates.length > 0) {
-      // Pick based on a seeded hash of the current track ID to keep it stable
-      // while displayQueue frequently re-evaluates
-      let seed = 0
+      // Pick based on a seeded hash of the current track ID + history length to break infinite A-B-A loops
+      let seed = history.value.length || 0
       const cid = currentTrack.value.id || currentTrack.value.url || 'seed'
       for (let i = 0; i < cid.length; i++) {
         seed = (seed * 31 + cid.charCodeAt(i)) % candidates.length

@@ -282,7 +282,7 @@
           <ul v-if="paginatedQueue.length > 0" class="space-y-2">
             <li
               v-for="item in paginatedQueue"
-              :key="item.track.file + item.idx"
+              :key="item.track.file + '-' + item.idx"
               class="rounded-2xl px-4 py-3 flex items-center gap-4 cursor-pointer transition-all duration-200"
               :class="
                 item.idx === player.currentIndex.value
@@ -300,7 +300,7 @@
                   :alt="item.track.title"
                   class="absolute inset-0 h-full w-full object-cover"
                   loading="lazy"
-                  @error="markCoverFailed(track.file)"
+                  @error="markCoverFailed(item.track.file)"
                 />
                 <span
                   v-if="
@@ -369,7 +369,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import API from '/src/model/api'

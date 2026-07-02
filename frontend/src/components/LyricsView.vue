@@ -120,16 +120,28 @@
             <!-- Lead Words -->
             <div
               v-else-if="item.line.words?.length"
-              class="w-full flex"
+              class="w-full flex relative"
               :class="getAlignClass(item.index)"
             >
               <div class="lead-words inline-flex flex-wrap text-left">
                 <span
                   v-for="(word, wi) in item.line.words"
-                  :key="'lead-' + wi"
-                  class="lyric-word"
-                  :data-text="word.text"
-                  :ref="(el) => registerWordEl(item.index, wi, el, false)"
+                  :key="'lead-base-' + wi"
+                  class="lyric-word base-word"
+                  :data-has-space="word.isTrailingSpace"
+                >
+                  {{ word.text }}
+                </span>
+              </div>
+              <div
+                class="lead-words highlight-words absolute inset-0 inline-flex flex-wrap text-left pointer-events-none"
+                aria-hidden="true"
+              >
+                <span
+                  v-for="(word, wi) in item.line.words"
+                  :key="'lead-hi-' + wi"
+                  class="lyric-word highlight-word"
+                  :data-has-space="word.isTrailingSpace"
                 >
                   {{ word.text }}
                 </span>
@@ -139,17 +151,28 @@
             <!-- Background Words -->
             <div
               v-if="item.line.background"
-              class="w-full flex scale-75 opacity-70 mt-1"
+              class="w-full flex scale-75 opacity-70 mt-1 relative"
               :class="getAlignClass(item.index)"
             >
               <div class="bg-words inline-flex flex-wrap text-left">
                 <span
                   v-for="(word, wi) in item.line.background"
-                  :key="'bg-' + wi"
-                  class="lyric-word"
+                  :key="'bg-base-' + wi"
+                  class="lyric-word base-word"
                   :data-has-space="word.isTrailingSpace"
-                  :data-text="word.text"
-                  :ref="(el) => registerWordEl(item.index, wi, el, true)"
+                >
+                  {{ word.text }}
+                </span>
+              </div>
+              <div
+                class="bg-words highlight-words absolute inset-0 inline-flex flex-wrap text-left pointer-events-none"
+                aria-hidden="true"
+              >
+                <span
+                  v-for="(word, wi) in item.line.background"
+                  :key="'bg-hi-' + wi"
+                  class="lyric-word highlight-word"
+                  :data-has-space="word.isTrailingSpace"
                 >
                   {{ word.text }}
                 </span>
@@ -329,14 +352,6 @@ animator.onFrame = ({ activeLineIdx: ali, scrollSpringPos }) => {
   }
 }
 
-function registerWordEl(li, wi, el, isBg) {
-  if (el) {
-    animator.registerWord(li, wi, el, isBg)
-  } else {
-    animator.unregisterWord(li, wi, isBg)
-  }
-}
-
 function registerLineEl(li, el) {
   if (el) {
     animator.registerLine(li, el)
@@ -401,7 +416,7 @@ const bgStyle = computed(() => ({
 const isActive = computed(() => props.isOpen || props.inline)
 
 watch(
-  isActive,
+  () => isActive.value,
   async (active) => {
     if (active) {
       await fetchLyrics()
@@ -819,12 +834,11 @@ onUnmounted(() => {
   position: relative;
   white-space: pre;
   margin-right: 0.12em;
-  color: rgba(255, 255, 255, 0.22); /* Chữ xám nền lúc chưa hát tới */
   font-weight: 800;
   letter-spacing: -0.015em;
   will-change: transform;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); /* Nhịp nảy lò xo micro-bounce */
-
+  /* Removed word-bounce transition as it requires word-level physics */
+  
   /* Preserve necessary structural properties */
   margin-bottom: 0.25em;
   cursor: pointer;
@@ -832,56 +846,46 @@ onUnmounted(() => {
   font-size: clamp(1.6rem, 4.5vw, 3.75rem);
 }
 
+.lyric-word.base-word {
+  color: rgba(255, 255, 255, 0.22); /* Chữ xám nền lúc chưa hát tới */
+}
+
+.lyric-word.highlight-word {
+  color: var(--dynamic-highlight, #ffffff);
+  
+  /* Đổ bóng rực rỡ 3 lớp (Responsive Glow) */
+  text-shadow:
+    0 0 0.4em var(--dynamic-primary, rgba(255, 255, 255, 1)),
+    0 0 0.9em var(--dynamic-primary, rgba(255, 255, 255, 0.85)),
+    0 0 1.8em var(--dynamic-primary, rgba(255, 255, 255, 0.5));
+}
+
 .lyric-word[data-has-space='true'] {
   margin-right: 0.35em;
 }
 
-/* 3. THẦN CHÚ KHẮC PHỤC GLOW HÌNH CHỮ NHẬT VÀ THÊM PARTICLES (RELATIVE `em` SCALE) */
-.lyric-word::before {
-  /* Removed word-level particle glow to replace with line-level particle */
-}
-
-.lyric-word::after {
-  content: attr(data-text);
-  position: absolute;
-  left: 0;
-  top: 0;
-  color: var(--dynamic-highlight, #ffffff);
-
-  /* Đổ bóng rực rỡ 3 lớp theo tỷ lệ tương đối với chữ (Responsive Glow) */
-  text-shadow:
-    0 0 calc(var(--glow-scale, 0) * 0.4em)
-      var(--dynamic-primary, rgba(255, 255, 255, 1)),
-    0 0 calc(var(--glow-scale, 0) * 0.9em)
-      var(--dynamic-primary, rgba(255, 255, 255, 0.85)),
-    0 0 calc(var(--glow-scale, 0) * 1.8em)
-      var(--dynamic-primary, rgba(255, 255, 255, 0.5));
-
-  /* Quét Karaoke mượt, mềm mại hơn */
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    #000 calc(var(--fill-pct, 0%) * 1.2 - 30%),
-    transparent calc(var(--fill-pct, 0%) * 1.2 + 10%)
-  );
-  mask-image: linear-gradient(
-    90deg,
-    #000 calc(var(--fill-pct, 0%) * 1.2 - 30%),
-    transparent calc(var(--fill-pct, 0%) * 1.2 + 10%)
-  );
-
-  opacity: var(--hl-opacity, 0);
-  will-change:
-    opacity,
-    -webkit-mask-image;
-}
-
-/* Vệt sáng ngang (particle) đi theo line thay vì từng chữ */
-.lead-words {
+/* Vệt sáng ngang (particle) và Gradient Mask đi theo line thay vì từng chữ */
+.lead-words, .bg-words {
   position: relative;
   width: 100%;
 }
 
-.lead-words::before {
+.highlight-words {
+  /* Quét Karaoke mượt, mềm mại hơn trên TOÀN BỘ line */
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    #000 calc(var(--line-progress, 0%) * 1.2 - 30%),
+    transparent calc(var(--line-progress, 0%) * 1.2 + 10%)
+  );
+  mask-image: linear-gradient(
+    90deg,
+    #000 calc(var(--line-progress, 0%) * 1.2 - 30%),
+    transparent calc(var(--line-progress, 0%) * 1.2 + 10%)
+  );
+  will-change: -webkit-mask-image;
+}
+
+.lead-words.highlight-words::before {
   content: '';
   position: absolute;
   top: -0.5em;
