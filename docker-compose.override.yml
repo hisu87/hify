@@ -1,0 +1,5 @@
+services:
+  hify-hisu:
+    volumes:
+      - ./downloads:/downloads
+      - ./data:/data
