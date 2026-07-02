@@ -76,72 +76,70 @@
         v-slot="{ item: { file } }"
       >
         <div class="py-1">
-        <li
-          class="surface rounded-2xl p-3 sm:p-4 flex items-center gap-3"
-        >
-          <!-- Cover thumb -->
-          <div
-            class="relative h-11 w-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden"
-          >
-            <img
-              v-if="!coverFailed[file]"
-              :src="coverUrlFor(file)"
-              :alt="file"
-              class="absolute inset-0 h-full w-full object-cover"
-              loading="lazy"
-              @error="markCoverFailed(file)"
-            />
-            <Icon v-else icon="clarity:music-note-line" class="h-5 w-5" />
-          </div>
-
-          <!-- Filename -->
-          <div class="flex-1 min-w-0">
-            <span class="text-sm font-medium truncate block">{{
-              displayName(file)
-            }}</span>
-            <span class="text-xs text-base-content/40 truncate block">
-              <span v-if="folderOf(file)" class="mr-2 text-primary/70">
-                <Icon
-                  icon="clarity:folder-line"
-                  class="inline h-3 w-3 mr-0.5 align-text-top"
-                />{{ folderOf(file) }}
-              </span>
-              {{ formatExt(file) }}
-            </span>
-          </div>
-
-          <!-- Actions -->
-          <div class="flex items-center gap-1 shrink-0">
-            <button
-              class="icon-btn text-primary hover:bg-primary/10"
-              @click="playFile(files.indexOf(file))"
-              :title="t('library.play')"
-            >
-              <Icon icon="clarity:play-line" class="h-4 w-4" />
-            </button>
-            <a
-              class="icon-btn"
-              :href="API.downloadFileURL(file)"
-              download
-              :title="t('library.downloadToDevice')"
-            >
-              <Icon icon="clarity:download-line" class="h-4 w-4" />
-            </a>
-            <button
-              class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
-              :disabled="deleting[file] === true"
-              @click="onDelete(file)"
-              :title="t('library.deleteFile')"
+          <li class="surface rounded-2xl p-3 sm:p-4 flex items-center gap-3">
+            <!-- Cover thumb -->
+            <div
+              class="relative h-11 w-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center overflow-hidden"
             >
               <img
-                v-if="deleting[file] === true"
-                src="../assets/14886.gif"
-                class="h-4 w-4 object-contain"
+                v-if="!coverFailed[file]"
+                :src="coverUrlFor(file)"
+                :alt="file"
+                class="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+                @error="markCoverFailed(file)"
               />
-              <Icon v-else icon="clarity:trash-line" class="h-4 w-4" />
-            </button>
-          </div>
-        </li>
+              <Icon v-else icon="clarity:music-note-line" class="h-5 w-5" />
+            </div>
+
+            <!-- Filename -->
+            <div class="flex-1 min-w-0">
+              <span class="text-sm font-medium truncate block">{{
+                displayName(file)
+              }}</span>
+              <span class="text-xs text-base-content/40 truncate block">
+                <span v-if="folderOf(file)" class="mr-2 text-primary/70">
+                  <Icon
+                    icon="clarity:folder-line"
+                    class="inline h-3 w-3 mr-0.5 align-text-top"
+                  />{{ folderOf(file) }}
+                </span>
+                {{ formatExt(file) }}
+              </span>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-1 shrink-0">
+              <button
+                class="icon-btn text-primary hover:bg-primary/10"
+                @click="playFile(files.indexOf(file))"
+                :title="t('library.play')"
+              >
+                <Icon icon="clarity:play-line" class="h-4 w-4" />
+              </button>
+              <a
+                class="icon-btn"
+                :href="API.downloadFileURL(file)"
+                download
+                :title="t('library.downloadToDevice')"
+              >
+                <Icon icon="clarity:download-line" class="h-4 w-4" />
+              </a>
+              <button
+                class="icon-btn text-error/70 hover:text-error hover:bg-error/10"
+                :disabled="deleting[file] === true"
+                @click="onDelete(file)"
+                :title="t('library.deleteFile')"
+              >
+                <img
+                  v-if="deleting[file] === true"
+                  src="../assets/14886.gif"
+                  class="h-4 w-4 object-contain"
+                />
+                <Icon v-else icon="clarity:trash-line" class="h-4 w-4" />
+              </button>
+            </div>
+          </li>
         </div>
       </RecycleScroller>
 
@@ -175,7 +173,12 @@ const player = usePlayer()
 const router = useRouter()
 
 const files = ref([])
-const virtualFiles = computed(() => files.value.map((f, i) => ({ id: typeof f === 'object' ? f.id || i : f, file: f })))
+const virtualFiles = computed(() =>
+  files.value.map((f, i) => ({
+    id: typeof f === 'object' ? f.id || i : f,
+    file: f,
+  }))
+)
 const loading = ref(false)
 const error = ref('')
 const deleting = ref({})
@@ -211,7 +214,9 @@ async function onDelete(file) {
   deleting.value = { ...deleting.value, [name]: true }
   try {
     await API.deleteDownload(name)
-    files.value = files.value.filter((f) => (typeof f === 'string' ? f : f.file) !== name)
+    files.value = files.value.filter(
+      (f) => (typeof f === 'string' ? f : f.file) !== name
+    )
   } catch {
     error.value = t('library.failedDelete', { file: name })
   } finally {

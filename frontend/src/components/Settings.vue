@@ -270,7 +270,9 @@
               </span>
             </label>
 
-            <div class="flex items-center justify-between rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5">
+            <div
+              class="flex items-center justify-between rounded-xl border border-white/10 bg-base-100/85 px-3 py-2.5"
+            >
               <span class="flex-1 text-sm">
                 <span class="block">Crossfade</span>
                 <span class="block text-[11px] text-base-content/50">
@@ -286,7 +288,9 @@
                   v-model="player.crossfadeDuration.value"
                   class="range range-xs range-primary w-24"
                 />
-                <span class="text-xs font-medium w-8 text-right">{{ player.crossfadeDuration.value }}s</span>
+                <span class="text-xs font-medium w-8 text-right"
+                  >{{ player.crossfadeDuration.value }}s</span
+                >
               </div>
             </div>
           </div>

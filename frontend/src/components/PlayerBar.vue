@@ -44,11 +44,19 @@
         </div>
 
         <div class="min-w-0 flex-1">
-          <p
-            class="truncate text-sm font-semibold tracking-tight text-base-content"
-          >
-            {{ trackTitle }}
-          </p>
+          <div class="flex items-center gap-2">
+            <p
+              class="truncate text-sm font-semibold tracking-tight text-base-content"
+            >
+              {{ trackTitle }}
+            </p>
+            <span
+              v-if="qualityBadge"
+              class="hidden sm:inline-flex shrink-0 items-center rounded-md bg-base-content/5 px-1.5 py-0.5 text-[9px] font-medium tracking-wider text-base-content/60 uppercase"
+            >
+              {{ qualityBadge }}
+            </span>
+          </div>
           <p class="truncate text-xs font-medium text-base-content/55">
             {{ trackArtist }}
           </p>
@@ -269,6 +277,24 @@ const trackTitle = computed(() => {
 const trackArtist = computed(() => {
   if (currentTrack.value?.artist) return currentTrack.value.artist
   return 'Queue a track to start playback'
+})
+
+const qualityBadge = computed(() => {
+  if (!currentTrack.value || !currentTrack.value.url) return null
+
+  const url = currentTrack.value.url.toLowerCase()
+  if (url.includes('youtube') || url.includes('/downloads/')) {
+    return 'YouTube Music ~256kbps Opus'
+  }
+
+  if (currentTrack.value.file) {
+    const parts = currentTrack.value.file.split('.')
+    if (parts.length > 1) {
+      return parts[parts.length - 1]
+    }
+  }
+
+  return null
 })
 
 const volumeIcon = computed(() => {

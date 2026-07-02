@@ -16,6 +16,7 @@ import logging
 import mimetypes
 import os
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -30,6 +31,9 @@ from mutagen.id3 import ID3
 from mutagen.mp4 import MP4
 from mutagen.oggopus import OggOpus
 from mutagen.oggvorbis import OggVorbis
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from uvicorn import Config, Server
 
 from hify import __version__, api
@@ -203,9 +207,42 @@ def _is_safe_path(path_str: str) -> bool:
     )
 
 
+limiter = Limiter(key_func=get_remote_address)
+
+
 def build_app() -> FastAPI:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        loop = asyncio.get_running_loop()
+        api.state.loop = loop
+        api.state.download_semaphore = asyncio.Semaphore(
+            max(1, int(api.state.settings.get('max_parallel_downloads', 3)))
+        )
+        # Unify both monitor and core tracking into hify.db
+        db_path = DATABASE_DIR / 'hify.db'
+        api.state.monitor_db = PlaylistMonitorDB(db_path)
+
+        main_db_path = DATABASE_DIR / 'hify.db'
+        api.state.db = DatabaseManager(main_db_path)
+
+        # Run synchronous filesystem scanning in a thread
+        await asyncio.to_thread(
+            sync_filesystem_to_db, DOWNLOAD_DIR, api.state.db
+        )
+
+        asyncio.create_task(
+            monitor_loop(
+                db=api.state.monitor_db,
+                get_downloader=lambda: api.state.downloader,
+                broadcast=api.state.connections.broadcast,
+                loop=loop,
+                settings=api.state.settings,
+            )
+        )
+        yield
 
     app = FastAPI(
         title='Hify',
@@ -214,10 +251,19 @@ def build_app() -> FastAPI:
             'art and metadata in a self-hosted way via Docker.'
         ),
         version=__version__,
+        lifespan=lifespan,
     )
+
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    allowed_origins = os.getenv(
+        'ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173'
+    ).split(',')
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=['*'],
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=['*'],
         allow_headers=['*'],
@@ -230,7 +276,7 @@ def build_app() -> FastAPI:
     api.state.version = __version__
 
     # Ensure covers directory exists and mount it
-    covers_dir = Path("data/covers")
+    covers_dir = Path('data/covers')
     covers_dir.mkdir(parents=True, exist_ok=True)
     app.mount('/covers', StaticFiles(directory=str(covers_dir)), name='covers')
     api.state.downloader = Downloader(
@@ -264,33 +310,6 @@ def build_app() -> FastAPI:
         )
 
     app.include_router(api.router)
-
-    @app.on_event('startup')
-    async def _startup() -> None:
-        loop = asyncio.get_running_loop()
-        api.state.loop = loop
-        api.state.download_semaphore = asyncio.Semaphore(
-            max(1, int(api.state.settings.get('max_parallel_downloads', 3)))
-        )
-        # Unify both monitor and core tracking into hify.db
-        db_path = DATABASE_DIR / 'hify.db'
-        api.state.monitor_db = PlaylistMonitorDB(db_path)
-
-        main_db_path = DATABASE_DIR / 'hify.db'
-        api.state.db = DatabaseManager(main_db_path)
-
-        # Run synchronous filesystem scanning in a thread
-        await asyncio.to_thread(sync_filesystem_to_db, DOWNLOAD_DIR, api.state.db)
-
-        asyncio.create_task(
-            monitor_loop(
-                db=api.state.monitor_db,
-                get_downloader=lambda: api.state.downloader,
-                broadcast=api.state.connections.broadcast,
-                loop=loop,
-                settings=api.state.settings,
-            )
-        )
 
     _list_cache = None
     _list_cache_time = 0
@@ -363,17 +382,23 @@ def build_app() -> FastAPI:
     @app.get('/downloads/{file_path:path}')
     async def download_file(file_path: str, request: Request):
         if not _is_safe_path(file_path):
-            return JSONResponse(status_code=400, content={'error': 'Invalid path'})
+            return JSONResponse(
+                status_code=400, content={'error': 'Invalid path'}
+            )
 
         base = DOWNLOAD_DIR.resolve()
         try:
             full = (base / file_path).resolve()
             full.relative_to(base)
         except (ValueError, RuntimeError):
-            return JSONResponse(status_code=400, content={'error': 'Invalid path'})
+            return JSONResponse(
+                status_code=400, content={'error': 'Invalid path'}
+            )
 
         if not full.is_file():
-            return JSONResponse(status_code=404, content={'error': 'File not found'})
+            return JSONResponse(
+                status_code=404, content={'error': 'File not found'}
+            )
 
         file_size = full.stat().st_size
         range_header = request.headers.get('Range')
@@ -384,11 +409,15 @@ def build_app() -> FastAPI:
                 with open(full, 'rb') as f:
                     while chunk := f.read(1024 * 1024):
                         yield chunk
+
             media_type, _ = mimetypes.guess_type(str(full))
             return StreamingResponse(
                 file_iterator(),
                 media_type=media_type or 'application/octet-stream',
-                headers={'Accept-Ranges': 'bytes', 'Content-Length': str(file_size)}
+                headers={
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': str(file_size),
+                },
             )
 
         try:
@@ -396,12 +425,14 @@ def build_app() -> FastAPI:
             start = int(byte_range[0])
             end = int(byte_range[1]) if byte_range[1] else file_size - 1
         except ValueError:
-            return JSONResponse(status_code=416, content={'error': 'Invalid Range'})
+            return JSONResponse(
+                status_code=416, content={'error': 'Invalid Range'}
+            )
 
         if start >= file_size or end >= file_size or start > end:
             return JSONResponse(
                 status_code=416,
-                headers={'Content-Range': f'bytes */{file_size}'}
+                headers={'Content-Range': f'bytes */{file_size}'},
             )
 
         chunk_size = end - start + 1
@@ -427,9 +458,10 @@ def build_app() -> FastAPI:
             headers={
                 'Accept-Ranges': 'bytes',
                 'Content-Range': f'bytes {start}-{end}/{file_size}',
-                'Content-Length': str(chunk_size)
-            }
+                'Content-Length': str(chunk_size),
+            },
         )
+
     app.mount(
         '/',
         SPAStaticFiles(directory=WEB_GUI_LOCATION, html=True),

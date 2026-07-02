@@ -86,7 +86,10 @@
 
             <!-- Instrument / empty line -->
             <span
-              v-if="item.line.isInstrumental || (!item.line.words?.length && syncType === 'word')"
+              v-if="
+                item.line.isInstrumental ||
+                (!item.line.words?.length && syncType === 'word')
+              "
               class="lyric-instrument"
             >
               {{ item.line.isInstrumental ? '• • •' : '♪' }}
